@@ -4,9 +4,10 @@ import { createClient } from '@supabase/supabase-js'
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-const supabase = createClient(supabaseUrl!, supabaseKey!)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: Request) {
   try {
@@ -32,80 +33,120 @@ export async function POST(request: Request) {
     switch (command) {
       case '/start': {
         const tips = [
-          'Sleep 7-8 hours before gaming — your accuracy will increase by 15%.',
-          'Play between 19:00 and 21:00 for peak win rate.',
-          'Take a 5-minute break every 2 games to avoid tilt.',
-          'Warm up your wrists for 3 minutes before playing.',
-          'Drink water between matches — dehydration slows reaction time.'
+          'Спи 7–8 часов перед игрой — точность вырастет на 15%.',
+          'Играй с 19:00 до 21:00 — в это время пик винрейта.',
+          'Делай 5-минутный перерыв каждые 2 игры, чтобы избежать тильта.',
+          'Разминай кисти 3 минуты перед игрой.',
+          'Пей воду между матчами — обезвоживание замедляет реакцию.'
         ]
         const tip = tips[Math.floor(Math.random() * tips.length)]
-        let msg = 'Ufuture Bot is ready!\n\n'
-        msg += 'Commands:\n'
-        msg += '/link NICKNAME — connect your Faceit\n'
-        msg += '/sleep HOURS — log sleep\n'
-        msg += '/mood TEXT — log mood\n'
-        msg += '/elo — check your ELO\n'
-        msg += '/stats — your stats\n\n'
-        msg += 'Today\'s tip: ' + tip
-        if (faceitNick) msg += '\n\nYour Faceit: ' + faceitNick
+        let msg = '🤖 Бот Ufuture готов!\n\n'
+        msg += 'Доступные команды:\n'
+        msg += '/link НИК — привязать Faceit\n'
+        msg += '/sleep ЧАСЫ — записать сон\n'
+        msg += '/mood НАСТРОЕНИЕ — записать настроение\n'
+        msg += '/elo — узнать свой ELO\n'
+        msg += '/stats — статистика\n\n'
+        msg += '💡 Совет дня: ' + tip
+        if (faceitNick) msg += '\n\n🎮 Твой Faceit: ' + faceitNick
         await sendMessage(chatId, msg)
         break
       }
 
       case '/link': {
         const nick = args[1]
-        if (!nick) { await sendMessage(chatId, 'Usage: /link YOUR_FACEIT_NICKNAME'); break }
-        await supabase.from('user_links').upsert({ telegram_id: telegramId, faceit_nickname: nick }, { onConflict: 'telegram_id' })
-        await sendMessage(chatId, 'Linked! Your Faceit: ' + nick)
+        if (!nick) { await sendMessage(chatId, 'Использование: /link ТВОЙ_НИК'); break }
+        await supabase.from('user_links').upsert(
+          { telegram_id: telegramId, faceit_nickname: nick },
+          { onConflict: 'telegram_id' }
+        )
+        await sendMessage(chatId, '✅ Faceit привязан: ' + nick)
         break
       }
 
       case '/sleep': {
         const hours = parseFloat(args[1])
-        if (isNaN(hours) || hours < 0 || hours > 24) { await sendMessage(chatId, 'Usage: /sleep 7'); break }
-        const nick = faceitNick || 'anonymous'
-        const { error } = await supabase.from('sleep_log').insert({ nickname: nick, hours, recorded_at: new Date().toISOString().split('T')[0] })
-        if (error) { await sendMessage(chatId, 'Error: ' + error.message) }
-        else { await sendMessage(chatId, 'Sleep ' + hours + 'h logged for ' + nick) }
+        if (isNaN(hours) || hours < 0 || hours > 24) {
+          await sendMessage(chatId, 'Укажи число, например: /sleep 7')
+          break
+        }
+        const nick = faceitNick || 'аноним'
+        const { error } = await supabase.from('sleep_log').insert({
+          nickname: nick,
+          hours,
+          recorded_at: new Date().toISOString().split('T')[0]
+        })
+        if (error) {
+          await sendMessage(chatId, '❌ Ошибка: ' + error.message)
+        } else {
+          await sendMessage(chatId, '✅ Сон ' + hours + ' ч записан для ' + nick)
+        }
         break
       }
 
       case '/mood': {
         const mood = args.slice(1).join(' ')
-        if (!mood) { await sendMessage(chatId, 'Usage: /mood great'); break }
-        const nick = faceitNick || 'anonymous'
-        const { error } = await supabase.from('mood_log').insert({ nickname: nick, mood, recorded_at: new Date().toISOString().split('T')[0] })
-        if (error) { await sendMessage(chatId, 'Error: ' + error.message) }
-        else { await sendMessage(chatId, 'Mood "' + mood + '" logged for ' + nick) }
+        if (!mood) {
+          await sendMessage(chatId, 'Укажи настроение, например: /mood отличное')
+          break
+        }
+        const nick = faceitNick || 'аноним'
+        const { error } = await supabase.from('mood_log').insert({
+          nickname: nick,
+          mood,
+          recorded_at: new Date().toISOString().split('T')[0]
+        })
+        if (error) {
+          await sendMessage(chatId, '❌ Ошибка: ' + error.message)
+        } else {
+          await sendMessage(chatId, '✅ Настроение «' + mood + '» записано для ' + nick)
+        }
         break
       }
 
       case '/elo': {
-        if (!faceitNick) { await sendMessage(chatId, 'Link your Faceit first: /link NICKNAME'); break }
-        const { data } = await supabase.from('elo_history').select('elo').eq('nickname', faceitNick).order('recorded_at', { ascending: false }).limit(1)
+        if (!faceitNick) {
+          await sendMessage(chatId, 'Сначала привяжи Faceit: /link ТВОЙ_НИК')
+          break
+        }
+        const { data } = await supabase
+          .from('elo_history')
+          .select('elo')
+          .eq('nickname', faceitNick)
+          .order('recorded_at', { ascending: false })
+          .limit(2)
         if (data && data.length > 0) {
-          const prev = await supabase.from('elo_history').select('elo').eq('nickname', faceitNick).order('recorded_at', { ascending: false }).limit(2)
           const current = data[0].elo
-          const previous = prev.data && prev.data.length > 1 ? prev.data[1].elo : current
+          const previous = data.length > 1 ? data[1].elo : current
           const diff = current - previous
           const emoji = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️'
-          await sendMessage(chatId, `${faceitNick}: ${current} ELO ${emoji} ${diff >= 0 ? '+' : ''}${diff}\nFull stats: https://meta-sborka.vercel.app/cabinet?nickname=${faceitNick}`)
+          await sendMessage(chatId, `${faceitNick}: ${current} ELO ${emoji} ${diff >= 0 ? '+' : ''}${diff}\nПолная статистика: https://meta-sborka.vercel.app/cabinet?nickname=${faceitNick}`)
         } else {
-          await sendMessage(chatId, 'No ELO data yet. Open your cabinet: https://meta-sborka.vercel.app/cabinet?nickname=' + faceitNick)
+          await sendMessage(chatId, 'Нет данных ELO. Открой кабинет: https://meta-sborka.vercel.app/cabinet?nickname=' + faceitNick)
         }
         break
       }
 
       case '/stats': {
-        if (!faceitNick) { await sendMessage(chatId, 'Link first: /link NICKNAME'); break }
-        const { data: sleepData } = await supabase.from('sleep_log').select('hours').eq('nickname', faceitNick).order('recorded_at', { ascending: false }).limit(7)
-        const avg = sleepData?.length ? (sleepData.reduce((a: number, b: any) => a + b.hours, 0) / sleepData.length).toFixed(1) : '—'
-        await sendMessage(chatId, `${faceitNick}:\nAvg sleep (7 days): ${avg}h\nFull stats: https://meta-sborka.vercel.app/cabinet?nickname=${faceitNick}`)
+        if (!faceitNick) {
+          await sendMessage(chatId, 'Сначала привяжи Faceit: /link ТВОЙ_НИК')
+          break
+        }
+        const { data: sleepData } = await supabase
+          .from('sleep_log')
+          .select('hours')
+          .eq('nickname', faceitNick)
+          .order('recorded_at', { ascending: false })
+          .limit(7)
+        const avg = sleepData?.length
+          ? (sleepData.reduce((a: number, b: any) => a + b.hours, 0) / sleepData.length).toFixed(1)
+          : '—'
+        await sendMessage(chatId, `${faceitNick}:\nСредний сон за 7 дней: ${avg} ч\nПолная статистика: https://meta-sborka.vercel.app/cabinet?nickname=${faceitNick}`)
         break
       }
 
       default:
-        await sendMessage(chatId, 'Commands: /start, /link, /sleep, /mood, /elo, /stats')
+        await sendMessage(chatId, 'Команды: /start, /link, /sleep, /mood, /elo, /stats')
     }
 
     return NextResponse.json({ ok: true })
