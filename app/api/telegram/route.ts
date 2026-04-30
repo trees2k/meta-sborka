@@ -19,54 +19,45 @@ export async function POST(request: Request) {
     const text = message.text.trim()
     const args = text.split(' ')
     const command = args[0].toLowerCase()
-    const nickname = message.chat.username || 'anonymous'
+    const nickname = message.chat.username || 'unknown'
 
     switch (command) {
       case '/start':
-        await sendMessage(chatId, 'Hello! I am Meta-Sborka bot.\n\nCommands:\n/sleep 7 - log sleep\n/mood good - log mood\n/stats - see stats')
+        await sendMessage(chatId, 'Привет! Я бот Meta-Sborka.\n\nКоманды:\n/sleep 7\n/mood отличное\n/stats')
         break
 
       case '/sleep':
         const hours = parseFloat(args[1])
         if (isNaN(hours) || hours < 0 || hours > 24) {
-          await sendMessage(chatId, 'Please enter a number, e.g. /sleep 7')
+          await sendMessage(chatId, 'Укажи число, например: /sleep 7')
         } else {
-          const { error } = await supabase.from('sleep_log').insert({ nickname, hours, recorded_at: new Date().toISOString().split('T')[0] })
-          if (error) {
-            console.error('Supabase insert error:', error)
-            await sendMessage(chatId, 'Error saving data.')
-          } else {
-            await sendMessage(chatId, `Sleep ${hours}h logged.`)
-          }
+          await supabase.from('sleep_log').insert({ nickname, hours, recorded_at: new Date().toISOString().split('T')[0] })
+          await sendMessage(chatId, `✅ Сон ${hours} ч записан.`)
         }
         break
 
       case '/mood':
         const mood = args.slice(1).join(' ')
         if (!mood) {
-          await sendMessage(chatId, 'Please enter your mood, e.g. /mood good')
+          await sendMessage(chatId, 'Укажи настроение, например: /mood отличное')
         } else {
-          const { error } = await supabase.from('mood_log').insert({ nickname, mood, recorded_at: new Date().toISOString().split('T')[0] })
-          if (error) {
-            console.error('Supabase insert error:', error)
-            await sendMessage(chatId, 'Error saving data.')
-          } else {
-            await sendMessage(chatId, `Mood "${mood}" logged.`)
-          }
+          await supabase.from('mood_log').insert({ nickname, mood, recorded_at: new Date().toISOString().split('T')[0] })
+          await sendMessage(chatId, `✅ Настроение "${mood}" записано.`)
         }
         break
 
       case '/stats':
-        await sendMessage(chatId, 'Stats: https://meta-sborka.vercel.app')
+        const { data: sleepData } = await supabase.from('sleep_log').select('hours').eq('nickname', nickname).order('recorded_at', { ascending: false }).limit(7)
+        const avgSleep = sleepData?.length ? (sleepData.reduce((a: number, b: any) => a + b.hours, 0) / sleepData.length).toFixed(1) : '—'
+        await sendMessage(chatId, `📊 Твой средний сон за 7 дней: ${avgSleep} ч.\nПолная статистика: https://meta-sborka.vercel.app`)
         break
 
       default:
-        await sendMessage(chatId, 'Commands: /start, /sleep, /mood, /stats')
+        await sendMessage(chatId, 'Команды: /start, /sleep, /mood, /stats')
     }
 
     return NextResponse.json({ ok: true })
-  } catch (err) {
-    console.error('Bot error:', err)
+  } catch (error) {
     return NextResponse.json({ ok: false }, { status: 500 })
   }
 }
