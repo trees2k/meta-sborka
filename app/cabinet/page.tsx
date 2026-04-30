@@ -1,86 +1,176 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { TrendingUp, Target, Calendar } from 'lucide-react'
 
-export default function Cabinet() {
+export const dynamic = 'force-dynamic'
+
+function CabinetContent() {
+  const searchParams = useSearchParams()
   const [nickname, setNickname] = useState('')
-  const [inputNick, setInputNick] = useState('')
   const [player, setPlayer] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [goal, setGoal] = useState<any>(null)
+  const [targetInput, setTargetInput] = useState('')
+  const [eloHistory, setEloHistory] = useState<any[]>([])
 
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('currentNickname') : null
-    if (saved) {
-      setNickname(saved)
-      setInputNick(saved)
+    const paramNick = searchParams.get('nickname')
+    if (paramNick) {
+      setNickname(paramNick)
+      if (typeof window !== 'undefined') localStorage.setItem('currentNickname', paramNick)
+    } else {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('currentNickname')
+        if (saved) setNickname(saved)
+      }
     }
-  }, [])
+  }, [searchParams])
 
   useEffect(() => {
     if (!nickname) return
-    if (typeof window !== 'undefined') localStorage.setItem('currentNickname', nickname)
+    const savedGoal = typeof window !== 'undefined' ? localStorage.getItem(`goal_${nickname}`) : null
+    if (savedGoal) setGoal(JSON.parse(savedGoal))
+  }, [nickname])
+
+  useEffect(() => {
+    if (!nickname) return
     setLoading(true)
     fetch(`/api/faceit?nickname=${encodeURIComponent(nickname)}`)
       .then(r => r.json())
       .then(data => {
         if (data.error) { setError(data.error); setPlayer(null) }
-        else { setPlayer(data); setError('') }
+        else {
+          setPlayer(data)
+          setError('')
+          fetch('/api/elo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nickname: data.nickname, elo: data.elo })
+          }).catch(() => {})
+        }
       })
-      .catch(() => setError('Ошибка загрузки'))
+      .catch(() => setError('Error'))
       .finally(() => setLoading(false))
+
+    fetch(`/api/elo?nickname=${encodeURIComponent(nickname)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setEloHistory(data.map((d: any) => ({ date: d.recorded_at, elo: d.elo })))
+        }
+      })
+      .catch(() => {})
   }, [nickname])
 
-  return (
-    <main className="min-h-screen bg-gray-950 text-white p-6">
-      <Link href="/" className="text-blue-400 hover:underline">← На главную</Link>
-      <div className="max-w-2xl mx-auto mt-8">
-        <div className="flex gap-2 mb-6">
-          <input
-            value={inputNick}
-            onChange={e => setInputNick(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && setNickname(inputNick)}
-            placeholder="Никнейм Faceit"
-            className="flex-1 px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white"
-          />
-          <button onClick={() => setNickname(inputNick)} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold">
-            Загрузить
-          </button>
-        </div>
+  const handleSetGoal = () => {
+    if (!player || !targetInput) return
+    const increase = parseInt(targetInput)
+    if (isNaN(increase) || increase <= 0) return
+    const newGoal = {
+      startDate: new Date().toISOString().split('T')[0],
+      startElo: player.elo,
+      targetElo: player.elo + increase,
+      nickname: player.nickname
+    }
+    setGoal(newGoal)
+    localStorage.setItem(`goal_${player.nickname}`, JSON.stringify(newGoal))
+    setTargetInput('')
+  }
 
-        {loading && <p>Загрузка...</p>}
-        {error && <p className="text-red-400">{error}</p>}
+  const progressPercent = goal && player
+    ? Math.min(100, ((player.elo - goal.startElo) / (goal.targetElo - goal.startElo)) * 100)
+    : 0
+
+  const daysLeft = goal
+    ? Math.max(0, 30 - Math.floor((new Date().getTime() - new Date(goal.startDate).getTime()) / (1000 * 60 * 60 * 24)))
+    : 0
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white p-6">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <Link href="/" className="text-blue-500 hover:underline">← Home</Link>
+
+        {!nickname && (
+          <div className="text-center py-20">
+            <h1 className="text-3xl font-bold mb-4">Enter Faceit nickname</h1>
+            <form onSubmit={e => { e.preventDefault(); const i = (e.target as any).nick; window.location.href = `/cabinet?nickname=${encodeURIComponent(i.value)}` }}>
+              <input name="nick" type="text" placeholder="meesoez" className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white" />
+              <button type="submit" className="ml-2 px-4 py-2 bg-blue-500 rounded-xl font-semibold">Enter</button>
+            </form>
+          </div>
+        )}
+
+        {loading && <p className="text-center py-20">Loading...</p>}
+        {error && <p className="text-center py-20 text-red-500">{error}</p>}
 
         {player && (
-          <div className="space-y-6">
-            <div className="bg-gray-800/50 rounded-2xl p-6 flex items-center gap-4">
+          <>
+            <div className="flex items-center gap-4 bg-gray-800/50 rounded-2xl p-6">
               <img src={player.avatar} className="w-16 h-16 rounded-full" alt="" />
               <div>
-                <p className="text-xl font-bold">{player.nickname}</p>
-                <p className="text-gray-400">Уровень {player.level} · ELO {player.elo}</p>
+                <h1 className="text-2xl font-bold">{player.nickname}</h1>
+                <p className="text-gray-400">Level {player.level} · ELO {player.elo}</p>
               </div>
             </div>
+
             <div className="bg-gray-800/50 rounded-2xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Статистика</h2>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-gray-500 text-sm">Win Rate</p>
-                  <p className="text-xl font-bold">{player.stats?.lifetime?.['Win Rate %'] || '—'}%</p>
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Target size={20} /> Monthly Goal</h2>
+              {!goal ? (
+                <div className="flex gap-2">
+                  <input type="number" placeholder="How much ELO to gain?" value={targetInput} onChange={e => setTargetInput(e.target.value)} className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white flex-1" />
+                  <button onClick={handleSetGoal} className="px-4 py-2 bg-blue-500 rounded-xl font-semibold">Set</button>
                 </div>
-                <div>
-                  <p className="text-gray-500 text-sm">K/D</p>
-                  <p className="text-xl font-bold">{player.stats?.lifetime?.['Average K/D Ratio'] || '—'}</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>Start: {goal.startElo} ELO</span>
+                    <span>Target: {goal.targetElo} ELO</span>
+                    <span className="flex items-center gap-1"><Calendar size={14} /> {daysLeft} days</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-4">
+                    <div className="bg-blue-500 h-4 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
+                  </div>
+                  <p className="text-sm text-gray-400">
+                    {progressPercent >= 100
+                      ? 'Goal achieved! Welcome to the Apex Club!'
+                      : `Progress: ${progressPercent.toFixed(0)}% · ${goal.targetElo - player.elo} ELO to go`}
+                  </p>
                 </div>
-                <div>
-                  <p className="text-gray-500 text-sm">Матчей</p>
-                  <p className="text-xl font-bold">{player.stats?.lifetime?.['Matches'] || '—'}</p>
-                </div>
-              </div>
+              )}
             </div>
-          </div>
+
+            <div className="bg-gray-800/50 rounded-2xl p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><TrendingUp size={20} /> ELO History</h2>
+              {eloHistory.length > 1 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={eloHistory}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="date" stroke="#9CA3AF" />
+                    <YAxis stroke="#9CA3AF" />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="elo" stroke="#3b82f6" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-gray-400">Not enough data. Visit daily to build history.</p>
+              )}
+            </div>
+          </>
         )}
       </div>
     </main>
+  )
+}
+
+export default function Cabinet() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">Loading...</div>}>
+      <CabinetContent />
+    </Suspense>
   )
 }
