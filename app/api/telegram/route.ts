@@ -4,10 +4,13 @@ import { createClient } from '@supabase/supabase-js'
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+console.log('Supabase URL:', supabaseUrl ? 'SET' : 'MISSING')
+console.log('Supabase Key:', supabaseKey ? 'SET' : 'MISSING')
+
+const supabase = createClient(supabaseUrl!, supabaseKey!)
 
 export async function POST(request: Request) {
   try {
@@ -23,18 +26,22 @@ export async function POST(request: Request) {
 
     switch (command) {
       case '/start':
-        await sendMessage(chatId, 'Hello! I am Meta-Sborka bot.\n\nCommands:\n/sleep 7 - log sleep\n/mood good - log mood\n/stats - see stats')
+        await sendMessage(chatId, 'Hello! Commands: /sleep 7, /mood good, /stats')
         break
 
       case '/sleep':
         const hours = parseFloat(args[1])
         if (isNaN(hours) || hours < 0 || hours > 24) {
-          await sendMessage(chatId, 'Please enter a number, e.g. /sleep 7')
+          await sendMessage(chatId, 'Enter a number, e.g. /sleep 7')
         } else {
-          const { error } = await supabase.from('sleep_log').insert({ nickname, hours, recorded_at: new Date().toISOString().split('T')[0] })
+          const { error } = await supabase.from('sleep_log').insert({
+            nickname,
+            hours,
+            recorded_at: new Date().toISOString().split('T')[0]
+          })
           if (error) {
-            console.error('Supabase insert error:', error)
-            await sendMessage(chatId, 'Error saving data.')
+            console.error('INSERT ERROR:', JSON.stringify(error))
+            await sendMessage(chatId, 'Error: ' + error.message)
           } else {
             await sendMessage(chatId, `Sleep ${hours}h logged.`)
           }
@@ -44,20 +51,20 @@ export async function POST(request: Request) {
       case '/mood':
         const mood = args.slice(1).join(' ')
         if (!mood) {
-          await sendMessage(chatId, 'Please enter your mood, e.g. /mood good')
+          await sendMessage(chatId, 'Enter mood, e.g. /mood good')
         } else {
-          const { error } = await supabase.from('mood_log').insert({ nickname, mood, recorded_at: new Date().toISOString().split('T')[0] })
+          const { error } = await supabase.from('mood_log').insert({
+            nickname,
+            mood,
+            recorded_at: new Date().toISOString().split('T')[0]
+          })
           if (error) {
-            console.error('Supabase insert error:', error)
-            await sendMessage(chatId, 'Error saving data.')
+            console.error('INSERT ERROR:', JSON.stringify(error))
+            await sendMessage(chatId, 'Error: ' + error.message)
           } else {
             await sendMessage(chatId, `Mood "${mood}" logged.`)
           }
         }
-        break
-
-      case '/stats':
-        await sendMessage(chatId, 'Stats: https://meta-sborka.vercel.app')
         break
 
       default:
@@ -65,8 +72,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ ok: true })
-  } catch (err) {
-    console.error('Bot error:', err)
+  } catch (err: any) {
+    console.error('BOT ERROR:', err)
     return NextResponse.json({ ok: false }, { status: 500 })
   }
 }
