@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Zap, TrendingUp, Clock, Target, Shield, Frown } from 'lucide-react'
+import { ArrowRight, Zap, TrendingUp, Clock, Target, Shield, Frown, Users } from 'lucide-react'
 
 export default function Landing() {
   const [nickname, setNickname] = useState('')
@@ -97,7 +97,7 @@ export default function Landing() {
         </section>
       )}
 
-      <section className="max-w-5xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-8">
+      <section className="max-w-5xl mx-auto px-6 py-16 grid grid-cols-2 md:grid-cols-4 gap-8">
         <div className="bg-gray-800/50 rounded-2xl p-8 text-center">
           <Zap className="text-blue-400 mx-auto mb-4" size={24} />
           <h3 className="font-semibold text-lg mb-2">AI-чекап</h3>
@@ -113,6 +113,12 @@ export default function Landing() {
           <h3 className="font-semibold text-lg mb-2">Гарантия возврата</h3>
           <p className="text-gray-400 text-sm">Не апнул ранг — деньги возвращаются.</p>
         </div>
+        <div className="bg-gray-800/50 rounded-2xl p-8 text-center">
+          <Users className="text-blue-400 mx-auto mb-4" size={24} />
+          <h3 className="font-semibold text-lg mb-2">Подбор команды</h3>
+          <p className="text-gray-400 text-sm">Заполни анкету — соберём идеальный состав.</p>
+          <Link href="/anketa" className="inline-block mt-4 text-blue-400 hover:underline text-sm">Заполнить →</Link>
+        </div>
       </section>
 
       <section className="max-w-2xl mx-auto px-6 py-16 text-center">
@@ -124,18 +130,14 @@ export default function Landing() {
             Попробовать
           </Link>
         </div>
-                <div className="bg-gray-800/50 rounded-2xl p-8 text-center">
-          <Users className="text-blue-400 mx-auto mb-4" size={24} />
-          <h3 className="font-semibold text-lg mb-2">Подбор команды</h3>
-          <p className="text-gray-400 text-sm">Заполни анкету — мы соберём идеальный состав.</p>
-        </div>
       </section>
-      
+
       <section className="max-w-2xl mx-auto px-6 py-8 text-center">
         <Link href="/blog" className="text-blue-400 hover:underline text-lg">
           📰 Читать блог Ufuture →
         </Link>
       </section>
+
       <footer className="text-center py-8 text-gray-600 text-sm">
         Ufuture © 2025. AI-платформа для геймеров.
       </footer>
