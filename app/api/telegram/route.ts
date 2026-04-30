@@ -72,43 +72,27 @@ export async function POST(request: Request) {
         }
         const nick = faceitNick || 'аноним'
         const { error } = await supabase.from('sleep_log').insert({
-          nickname: nick,
-          hours,
-          recorded_at: new Date().toISOString().split('T')[0]
+          nickname: nick, hours, recorded_at: new Date().toISOString().split('T')[0]
         })
-        if (error) {
-          await sendMessage(chatId, '❌ Ошибка: ' + error.message)
-        } else {
-          await sendMessage(chatId, '✅ Сон ' + hours + ' ч записан для ' + nick)
-        }
+        if (error) { await sendMessage(chatId, '❌ Ошибка: ' + error.message) }
+        else { await sendMessage(chatId, '✅ Сон ' + hours + ' ч записан для ' + nick) }
         break
       }
 
       case '/mood': {
         const mood = args.slice(1).join(' ')
-        if (!mood) {
-          await sendMessage(chatId, 'Укажи настроение, например: /mood отличное')
-          break
-        }
+        if (!mood) { await sendMessage(chatId, 'Укажи настроение, например: /mood отличное'); break }
         const nick = faceitNick || 'аноним'
         const { error } = await supabase.from('mood_log').insert({
-          nickname: nick,
-          mood,
-          recorded_at: new Date().toISOString().split('T')[0]
+          nickname: nick, mood, recorded_at: new Date().toISOString().split('T')[0]
         })
-        if (error) {
-          await sendMessage(chatId, '❌ Ошибка: ' + error.message)
-        } else {
-          await sendMessage(chatId, '✅ Настроение «' + mood + '» записано для ' + nick)
-        }
+        if (error) { await sendMessage(chatId, '❌ Ошибка: ' + error.message) }
+        else { await sendMessage(chatId, '✅ Настроение «' + mood + '» записано для ' + nick) }
         break
       }
 
       case '/elo': {
-        if (!faceitNick) {
-          await sendMessage(chatId, 'Сначала привяжи Faceit: /link ТВОЙ_НИК')
-          break
-        }
+        if (!faceitNick) { await sendMessage(chatId, 'Сначала привяжи Faceit: /link ТВОЙ_НИК'); break }
         const { data } = await supabase
           .from('elo_history')
           .select('elo')
@@ -128,10 +112,7 @@ export async function POST(request: Request) {
       }
 
       case '/stats': {
-        if (!faceitNick) {
-          await sendMessage(chatId, 'Сначала привяжи Faceit: /link ТВОЙ_НИК')
-          break
-        }
+        if (!faceitNick) { await sendMessage(chatId, 'Сначала привяжи Faceit: /link ТВОЙ_НИК'); break }
         const { data: sleepData } = await supabase
           .from('sleep_log')
           .select('hours')

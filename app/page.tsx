@@ -12,31 +12,22 @@ export default function Landing() {
 
   const handleScan = async () => {
     if (!nickname.trim()) return
-    setLoading(true)
-    setError('')
-    setPlayer(null)
+    setLoading(true); setError(''); setPlayer(null)
     try {
       const res = await fetch(`/api/faceit?nickname=${encodeURIComponent(nickname)}`)
       const data = await res.json()
-      if (data.error) {
-        setError(data.error)
-      } else {
-        setPlayer(data)
-      }
-    } catch {
-      setError('Ошибка соединения')
-    }
+      if (data.error) setError('Игрок не найден')
+      else setPlayer(data)
+    } catch { setError('Ошибка соединения') }
     setLoading(false)
   }
 
   const idealTime = player?.elo > 2000 ? '19:00 – 21:00' : '20:00 – 22:00'
   const winRate = player?.stats?.lifetime?.['Win Rate %'] || '—'
-  const kd = player?.stats?.lifetime?.['Average K/D Ratio'] || '—'
   const potentialElo = player?.elo ? Math.round(player.elo * 1.07) : '—'
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
-      {/* Hero */}
       <section className="max-w-3xl mx-auto px-6 pt-24 pb-12 text-center">
         <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-full px-4 py-1.5 text-sm text-blue-400 mb-6">
           <Zap size={14} /> Бесплатный AI-чекап
@@ -45,44 +36,34 @@ export default function Landing() {
           Узнай, сколько ELO ты теряешь
         </h1>
         <p className="text-lg text-gray-400 mb-8">
-          Введи никнейм Faceit и получи персональный отчёт: твой идеальный слот для игры, слабые места и потенциал апа.
+          Введи никнейм Faceit и получи персональный отчёт.
         </p>
-
-        {/* Форма сканирования */}
         <div className="flex gap-2 max-w-md mx-auto mb-4">
           <input
-            type="text"
             value={nickname}
             onChange={e => setNickname(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleScan()}
             placeholder="Твой никнейм Faceit"
-            className="flex-1 px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="flex-1 px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-white placeholder-gray-500"
           />
-          <button
-            onClick={handleScan}
-            disabled={loading}
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 rounded-xl font-semibold transition-all"
-          >
+          <button onClick={handleScan} disabled={loading}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 rounded-xl font-semibold">
             {loading ? 'Анализ...' : 'Сканировать'}
           </button>
         </div>
         {error && <p className="text-red-400 text-sm">{error}</p>}
       </section>
 
-      {/* Карточка результата */}
       {player && (
         <section className="max-w-2xl mx-auto px-6 pb-16">
           <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-6 space-y-6">
-            {/* Профиль */}
             <div className="flex items-center gap-4">
-              <img src={player.avatar} className="w-14 h-14 rounded-full" />
+              <img src={player.avatar} className="w-14 h-14 rounded-full" alt="" />
               <div>
                 <p className="text-xl font-bold">{player.nickname}</p>
                 <p className="text-gray-400">Уровень {player.level} · ELO {player.elo}</p>
               </div>
             </div>
-
-            {/* Метрики */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gray-900/50 rounded-xl p-4 text-center">
                 <Clock className="text-blue-400 mx-auto mb-1" size={18} />
@@ -105,14 +86,10 @@ export default function Landing() {
                 <p className="font-semibold text-sm">3</p>
               </div>
             </div>
-
-            {/* Призыв к действию */}
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-center">
-              <p className="text-sm text-gray-300 mb-2">Хочешь полный AI-разбор, план апа и гарантию возврата?</p>
-              <Link
-                href={`/cabinet?nickname=${encodeURIComponent(player.nickname)}`}
-                className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-xl font-semibold text-sm transition-all"
-              >
+              <p className="text-sm text-gray-300 mb-2">Хочешь полный AI-разбор и план апа?</p>
+              <Link href={`/cabinet?nickname=${player.nickname}`}
+                className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-xl font-semibold text-sm">
                 В личный кабинет <ArrowRight size={16} />
               </Link>
             </div>
@@ -120,26 +97,24 @@ export default function Landing() {
         </section>
       )}
 
-      {/* Блоки "Как работает" */}
       <section className="max-w-5xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-8">
         <div className="bg-gray-800/50 rounded-2xl p-8 text-center">
           <Zap className="text-blue-400 mx-auto mb-4" size={24} />
           <h3 className="font-semibold text-lg mb-2">AI-чекап</h3>
-          <p className="text-gray-400 text-sm">Бесплатный анализ твоего аккаунта Faceit за 5 секунд.</p>
+          <p className="text-gray-400 text-sm">Бесплатный анализ Faceit за 5 секунд.</p>
         </div>
         <div className="bg-gray-800/50 rounded-2xl p-8 text-center">
           <Target className="text-blue-400 mx-auto mb-4" size={24} />
           <h3 className="font-semibold text-lg mb-2">План на месяц</h3>
-          <p className="text-gray-400 text-sm">Персональные рекомендации: сон, время игры, анти-тильт.</p>
+          <p className="text-gray-400 text-sm">Рекомендации: сон, время игры, анти-тильт.</p>
         </div>
         <div className="bg-gray-800/50 rounded-2xl p-8 text-center">
           <Shield className="text-blue-400 mx-auto mb-4" size={24} />
           <h3 className="font-semibold text-lg mb-2">Гарантия возврата</h3>
-          <p className="text-gray-400 text-sm">Не апнул ранг — деньги возвращаются автоматически.</p>
+          <p className="text-gray-400 text-sm">Не апнул ранг — деньги возвращаются.</p>
         </div>
       </section>
 
-      {/* Подписка */}
       <section className="max-w-2xl mx-auto px-6 py-16 text-center">
         <h2 className="text-3xl font-bold mb-6">Одна подписка — всё включено</h2>
         <div className="bg-gray-800/50 rounded-2xl p-8 border border-gray-700">
@@ -152,7 +127,7 @@ export default function Landing() {
       </section>
 
       <footer className="text-center py-8 text-gray-600 text-sm">
-        Meta-Sborka © 2025. AI-платформа для геймеров.
+        Ufuture © 2025. AI-платформа для геймеров.
       </footer>
     </main>
   )
