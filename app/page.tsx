@@ -124,6 +124,11 @@ export default function Landing() {
             Попробовать
           </Link>
         </div>
+                <div className="bg-gray-800/50 rounded-2xl p-8 text-center">
+          <Users className="text-blue-400 mx-auto mb-4" size={24} />
+          <h3 className="font-semibold text-lg mb-2">Подбор команды</h3>
+          <p className="text-gray-400 text-sm">Заполни анкету — мы соберём идеальный состав.</p>
+        </div>
       </section>
       
       <section className="max-w-2xl mx-auto px-6 py-8 text-center">
