@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-export default function Post2() {
+export default function SonPage() {
   return (
     <main className="min-h-screen bg-gray-950 text-white p-6">
       <div className="max-w-3xl mx-auto">
@@ -11,9 +11,9 @@ export default function Post2() {
           <p>Сон — это главный буст для твоего рейтинга.</p>
           <h2 className="text-xl font-semibold mt-6">Цифры</h2>
           <ul className="list-disc pl-6 space-y-1">
-            <li>6 часов сна → реакция на 15% медленнее.</li>
-            <li>7–8 часов → пиковая Accuracy.</li>
-            <li>Меньше 5 часов → винрейт падает на 20%+.</li>
+            <li>6 часов сна — реакция на 15% медленнее.</li>
+            <li>7–8 часов — пиковая Accuracy.</li>
+            <li>Меньше 5 часов — винрейт падает на 20%+.</li>
           </ul>
           <h2 className="text-xl font-semibold mt-6">Как улучшить сон</h2>
           <ol className="list-decimal pl-6 space-y-2">
