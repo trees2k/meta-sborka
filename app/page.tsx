@@ -125,7 +125,11 @@ export default function Landing() {
           </Link>
         </div>
       </section>
-
+      <section className="max-w-2xl mx-auto px-6 py-8 text-center">
+        <Link href="/blog" className="text-blue-400 hover:underline text-lg">
+          📰 Читать блог Ufuture →
+        </Link>
+      </section>
       <footer className="text-center py-8 text-gray-600 text-sm">
         Ufuture © 2025. AI-платформа для геймеров.
       </footer>
