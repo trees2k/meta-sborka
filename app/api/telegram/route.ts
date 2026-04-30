@@ -7,9 +7,6 @@ const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-console.log('Supabase URL:', supabaseUrl ? 'SET' : 'MISSING')
-console.log('Supabase Key:', supabaseKey ? 'SET' : 'MISSING')
-
 const supabase = createClient(supabaseUrl!, supabaseKey!)
 
 export async function POST(request: Request) {
@@ -35,9 +32,7 @@ export async function POST(request: Request) {
           await sendMessage(chatId, 'Enter a number, e.g. /sleep 7')
         } else {
           const { error } = await supabase.from('sleep_log').insert({
-            nickname,
-            hours,
-            recorded_at: new Date().toISOString().split('T')[0]
+            nickname, hours, recorded_at: new Date().toISOString().split('T')[0]
           })
           if (error) {
             console.error('INSERT ERROR:', JSON.stringify(error))
@@ -54,9 +49,7 @@ export async function POST(request: Request) {
           await sendMessage(chatId, 'Enter mood, e.g. /mood good')
         } else {
           const { error } = await supabase.from('mood_log').insert({
-            nickname,
-            mood,
-            recorded_at: new Date().toISOString().split('T')[0]
+            nickname, mood, recorded_at: new Date().toISOString().split('T')[0]
           })
           if (error) {
             console.error('INSERT ERROR:', JSON.stringify(error))
