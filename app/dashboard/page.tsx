@@ -1,20 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function Dashboard() {
+function DashboardContent() {
+  const searchParams = useSearchParams()
   const [nickname, setNickname] = useState('')
   const [player, setPlayer] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleFetch = () => {
-    if (!nickname.trim()) return
+  useEffect(() => {
+    const nick = searchParams.get('nickname')
+    if (nick) {
+      setNickname(nick)
+      fetchPlayer(nick)
+    }
+  }, [searchParams])
+
+  const fetchPlayer = (nick: string) => {
+    if (!nick.trim()) return
     setLoading(true)
     setError('')
     setPlayer(null)
-    fetch(`/api/faceit?nickname=${encodeURIComponent(nickname)}`)
+    fetch(`/api/faceit?nickname=${encodeURIComponent(nick)}`)
       .then(r => r.json())
       .then(data => {
         if (data.error) { setError(data.error) }
@@ -32,11 +42,11 @@ export default function Dashboard() {
           <input
             value={nickname}
             onChange={e => setNickname(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleFetch()}
+            onKeyDown={e => e.key === 'Enter' && fetchPlayer(nickname)}
             placeholder="Никнейм Faceit"
             className="flex-1 px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white"
           />
-          <button onClick={handleFetch} disabled={loading} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold disabled:opacity-50">
+          <button onClick={() => fetchPlayer(nickname)} disabled={loading} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold disabled:opacity-50">
             {loading ? 'Загрузка...' : 'Загрузить'}
           </button>
         </div>
@@ -58,5 +68,13 @@ export default function Dashboard() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white p-6">Загрузка...</div>}>
+      <DashboardContent />
+    </Suspense>
   )
 }
