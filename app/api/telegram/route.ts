@@ -19,15 +19,15 @@ export async function POST(request: Request) {
 
     switch (command) {
       case '/start':
-        await sendMessage(chatId, 'Привет! Я бот Meta-Sborka.\n\nКоманды:\n/sleep 7 — записать часы сна\n/mood отличное — записать настроение\n/stats — статистика')
+        await sendMessage(chatId, 'Привет! Я бот Meta-Sborka.\n\nКоманды:\n/sleep 7\n/mood отличное\n/stats')
         break
 
       case '/sleep':
         const hours = parseFloat(args[1])
         if (isNaN(hours) || hours < 0 || hours > 24) {
-          await sendMessage(chatId, 'Укажи количество часов, например: /sleep 7')
+          await sendMessage(chatId, 'Укажи число, например: /sleep 7')
         } else {
-          await sendMessage(chatId, `✅ Сон ${hours} ч. записан. Твой винрейт будет выше!`)
+          await sendMessage(chatId, 'Сон ' + hours + ' ч записан.')
         }
         break
 
@@ -36,12 +36,12 @@ export async function POST(request: Request) {
         if (!mood) {
           await sendMessage(chatId, 'Укажи настроение, например: /mood отличное')
         } else {
-          await sendMessage(chatId, `✅ Настроение "${mood}" записано.`)
+          await sendMessage(chatId, 'Настроение "' + mood + '" записано.')
         }
         break
 
       case '/stats':
-        await sendMessage(chatId, '📊 Статистика доступна на сайте: https://meta-sborka.vercel.app')
+        await sendMessage(chatId, 'Статистика: https://meta-sborka.vercel.app')
         break
 
       default:
