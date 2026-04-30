@@ -30,7 +30,7 @@ const articles: Record<string, { title: string; date: string; content: string }>
 [Попробовать AI-чекап](https://meta-sborka.vercel.app)
     `
   },
-  'son-i-reaktsiya-gaymera': {
+  'son-i-reaktsiya-geymera': {
     title: 'Сон и реакция геймера: исследование',
     date: '2025-05-01',
     content: `
@@ -70,8 +70,9 @@ const articles: Record<string, { title: string; date: string; content: string }>
   }
 }
 
-export default function BlogPost({ params }: { params: { slug: string } }) {
-  const post = articles[params.slug]
+export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const post = articles[slug]
   if (!post) notFound()
 
   return (
