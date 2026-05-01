@@ -13,6 +13,8 @@ export default function PublicProfile() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
+  const [likesMap, setLikesMap] = useState<Record<number, number>>({})
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
 
   useEffect(() => {
     if (!nickname) return
@@ -25,7 +27,17 @@ export default function PublicProfile() {
 
     fetch(`/api/highlights?nickname=${encodeURIComponent(nickname)}`)
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setHighlights(data) })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setHighlights(data)
+          data.forEach((h: any) => {
+            fetch(`/api/likes?highlight_id=${h.id}`)
+              .then(r => r.json())
+              .then(d => setLikesMap(prev => ({ ...prev, [h.id]: d.likes || 0 })))
+              .catch(() => {})
+          })
+        }
+      })
       .catch(() => {})
 
     fetch(`/api/follow?nickname=${encodeURIComponent(nickname)}&type=followers`)
@@ -53,6 +65,26 @@ export default function PublicProfile() {
       setIsFollowing(true)
       setFollowersCount(f => f + 1)
     }
+  }
+
+  const handleLike = async (highlightId: number) => {
+    const nick = localStorage.getItem('currentNickname')
+    if (!nick) { alert('Войди в кабинет'); return }
+    const res = await fetch('/api/likes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ highlight_id: highlightId, nickname: nick })
+    })
+    const data = await res.json()
+    if (data.ok) setLikesMap(prev => ({ ...prev, [highlightId]: data.likes }))
+  }
+
+  const getThumbnail = (url: string) => {
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      const id = url.match(/(?:v=|\/)([\w-]{11})/)?.[1]
+      return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null
+    }
+    return null
   }
 
   if (loading) return <main className="min-h-screen bg-gray-950 text-white flex items-center justify-center">Загрузка...</main>
@@ -96,13 +128,40 @@ export default function PublicProfile() {
           <p className="text-gray-500 mt-8 text-center">Пока нет хайлайтов.</p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
-            {highlights.map(h => (
-              <div key={h.id} className="bg-gray-800/50 rounded-xl p-4 hover:bg-gray-800 transition-all">
-                <p className="font-semibold text-sm truncate">{h.title}</p>
-                <p className="text-xs text-gray-500 mt-1">{h.map_name} · ELO {h.elo_snapshot}</p>
-                <a href={h.video_url} target="_blank" className="text-blue-400 text-xs hover:underline mt-2 inline-block">Смотреть →</a>
-              </div>
-            ))}
+            {highlights.map(h => {
+              const thumb = getThumbnail(h.video_url)
+              return (
+                <div key={h.id} className="bg-gray-800/50 rounded-xl overflow-hidden hover:bg-gray-800 transition-all">
+                  <div
+                    className="aspect-video bg-gray-900 flex items-center justify-center cursor-pointer relative"
+                    onClick={() => setSelectedVideo(h.video_url)}
+                  >
+                    {thumb ? (
+                      <img src={thumb} alt={h.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-4xl">▶️</span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="font-semibold text-sm truncate">{h.title}</p>
+                    <p className="text-xs text-gray-500 mt-1">{h.map_name} · ELO {h.elo_snapshot}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs text-gray-500">{new Date(h.created_at).toLocaleDateString()}</span>
+                      <button onClick={() => handleLike(h.id)} className="text-red-400 text-xs hover:text-red-300">❤️ {likesMap[h.id] || 0}</button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {selectedVideo && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" onClick={() => setSelectedVideo(null)}>
+            <div className="relative w-full max-w-4xl aspect-video" onClick={e => e.stopPropagation()}>
+              <button onClick={() => setSelectedVideo(null)} className="absolute -top-10 right-0 text-white text-2xl hover:text-gray-300">✕</button>
+              <iframe src={selectedVideo.replace('watch?v=', 'embed/')} className="w-full h-full rounded-xl" allowFullScreen />
+            </div>
           </div>
         )}
       </div>
