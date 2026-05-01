@@ -27,7 +27,7 @@ export default function LoginPage() {
 
   const handleSteamLogin = async () => {
     await supabase.auth.signInWithOAuth({
-      provider: 'steam',
+      provider: 'custom:steam' as any,
       options: { redirectTo: window.location.origin + '/cabinet' }
     })
   }
