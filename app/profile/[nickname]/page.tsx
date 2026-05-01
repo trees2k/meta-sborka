@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
 
 export default function PublicProfile() {
-  const params = useParams()
-  const nickname = (params?.nickname as string) || ''
+  const [nickname, setNickname] = useState('')
   const [player, setPlayer] = useState<any>(null)
   const [highlights, setHighlights] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -15,6 +13,12 @@ export default function PublicProfile() {
   const [followingCount, setFollowingCount] = useState(0)
   const [likesMap, setLikesMap] = useState<Record<number, number>>({})
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
+
+  useEffect(() => {
+    const path = window.location.pathname
+    const nick = path.split('/').pop() || ''
+    setNickname(nick)
+  }, [])
 
   useEffect(() => {
     if (!nickname) return
@@ -54,7 +58,7 @@ export default function PublicProfile() {
   }, [nickname])
 
   const handleFollow = async () => {
-    const currentUser = typeof window !== 'undefined' ? localStorage.getItem('currentNickname') : null
+    const currentUser = localStorage.getItem('currentNickname')
     if (!currentUser) { alert('Войди в кабинет'); return }
     if (isFollowing) {
       await fetch('/api/follow', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ follower_nickname: currentUser, following_nickname: nickname }) })
