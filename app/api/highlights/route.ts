@@ -18,13 +18,16 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const nickname = searchParams.get('nickname')
-  if (!nickname) return NextResponse.json({ error: 'nickname required' }, { status: 400 })
-  const { data, error } = await supabase
-    .from('highlights')
-    .select('*')
-    .eq('nickname', nickname)
-    .order('created_at', { ascending: false })
-    .limit(20)
+  const limit = parseInt(searchParams.get('limit') || '20')
+
+  let query = supabase.from('highlights').select('*').order('created_at', { ascending: false }).limit(limit)
+
+  if (nickname) {
+    query = query.eq('nickname', nickname)
+  }
+
+  const { data, error } = await query
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(data || [])
 }
