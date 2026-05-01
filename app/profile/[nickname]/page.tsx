@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation'
 
 export default function PublicProfile() {
   const params = useParams()
-  const nickname = params?.nickname as string || ''
+  const nickname = (params?.nickname as string) || ''
   const [player, setPlayer] = useState<any>(null)
   const [highlights, setHighlights] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -18,27 +18,21 @@ export default function PublicProfile() {
     if (!nickname) return
     setLoading(true)
 
-    // Данные Faceit
     fetch(`/api/faceit?nickname=${encodeURIComponent(nickname)}`)
       .then(r => r.json())
-      .then(data => {
-        if (!data.error) setPlayer(data)
-      })
+      .then(data => { if (!data.error) setPlayer(data) })
       .catch(() => {})
 
-    // Хайлайты
     fetch(`/api/highlights?nickname=${encodeURIComponent(nickname)}`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setHighlights(data) })
       .catch(() => {})
 
-    // Подписчики
     fetch(`/api/follow?nickname=${encodeURIComponent(nickname)}&type=followers`)
       .then(r => r.json())
       .then(data => setFollowersCount(data.count || 0))
       .catch(() => {})
 
-    // Подписки
     fetch(`/api/follow?nickname=${encodeURIComponent(nickname)}&type=following`)
       .then(r => r.json())
       .then(data => setFollowingCount(data.count || 0))
@@ -69,7 +63,6 @@ export default function PublicProfile() {
       <div className="max-w-4xl mx-auto p-6">
         <Link href="/" className="text-blue-400 hover:underline text-sm">← На главную</Link>
 
-        {/* Шапка профиля */}
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mt-6">
           <img src={player.avatar} className="w-24 h-24 rounded-full border-2 border-blue-500" alt="" />
           <div className="flex-1 text-center md:text-left">
@@ -89,28 +82,16 @@ export default function PublicProfile() {
           </div>
         </div>
 
-        {/* Метрики */}
         <div className="flex gap-8 mt-8 justify-center md:justify-start border-b border-gray-800 pb-6">
-          <div className="text-center">
-            <p className="text-2xl font-bold">{followersCount}</p>
-            <p className="text-gray-500 text-sm">подписчиков</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold">{followingCount}</p>
-            <p className="text-gray-500 text-sm">подписок</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold">{highlights.length}</p>
-            <p className="text-gray-500 text-sm">хайлайтов</p>
-          </div>
+          <div className="text-center"><p className="text-2xl font-bold">{followersCount}</p><p className="text-gray-500 text-sm">подписчиков</p></div>
+          <div className="text-center"><p className="text-2xl font-bold">{followingCount}</p><p className="text-gray-500 text-sm">подписок</p></div>
+          <div className="text-center"><p className="text-2xl font-bold">{highlights.length}</p><p className="text-gray-500 text-sm">хайлайтов</p></div>
         </div>
 
-        {/* Вкладки */}
         <div className="flex gap-6 mt-6 border-b border-gray-800 pb-3">
           <span className="text-blue-400 font-semibold border-b-2 border-blue-400 pb-3">🎬 Хайлайты</span>
         </div>
 
-        {/* Сетка хайлайтов */}
         {highlights.length === 0 ? (
           <p className="text-gray-500 mt-8 text-center">Пока нет хайлайтов.</p>
         ) : (
