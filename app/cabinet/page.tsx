@@ -6,14 +6,6 @@ import Link from 'next/link'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { TrendingUp, Target, Calendar, Upload } from 'lucide-react'
 
-// Динамический импорт WASM-парсера (будет загружен только в браузере)
-let parseDemoBuffer: any = null
-if (typeof window !== 'undefined') {
-  import('demoparser2').then(mod => {
-    parseDemoBuffer = mod.parseDemoBuffer
-  })
-}
-
 export const dynamic = 'force-dynamic'
 
 function CabinetContent() {
@@ -28,10 +20,9 @@ function CabinetContent() {
   const [demos, setDemos] = useState<any[]>([])
   const [demosLoading, setDemosLoading] = useState(false)
   const [analyses, setAnalyses] = useState<any[]>([])
-  const [parsing, setParsing] = useState(false)
   const [parseResult, setParseResult] = useState<any>(null)
+  const [parsing, setParsing] = useState(false)
 
-  // ... (useEffect для никнейма, цели, ELO остаются без изменений)
   useEffect(() => {
     const paramNick = searchParams.get('nickname')
     if (paramNick) {
@@ -115,42 +106,29 @@ function CabinetContent() {
     if (data.analyses) setAnalyses(data.analyses)
   }
 
-  // Клиентский парсинг демки
-  const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Загрузка файла демки и отправка на серверный API
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     setParsing(true)
     setParseResult(null)
 
+    const formData = new FormData()
+    formData.append('demo', file)
+    formData.append('nickname', nickname)
+
     try {
-      const buffer = await file.arrayBuffer()
-      if (!parseDemoBuffer) {
-        // Если WASM ещё не загрузился, ждём
-        const mod = await import('demoparser2')
-        parseDemoBuffer = mod.parseDemoBuffer
+      const res = await fetch('/api/demo/parse', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.ok) {
+        setParseResult(data.stats)
+        alert('Демка проанализирована!')
+      } else {
+        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'))
       }
-
-      // Парсим демку (получаем массив событий)
-      const events = await parseDemoBuffer(buffer)
-
-      // Извлекаем метрики из событий (реальный расчёт!)
-      const stats = extractMetrics(events, nickname)
-
-      // Показываем результат
-      setParseResult(stats)
-
-      // Сохраняем в Supabase
-      await fetch('/api/demo/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, stats })
-      })
-
-      alert('Демка проанализирована!')
     } catch (err: any) {
-      console.error('Parse error:', err)
-      alert('Ошибка парсинга: ' + err.message)
+      alert('Ошибка: ' + err.message)
     } finally {
       setParsing(false)
     }
@@ -184,7 +162,6 @@ function CabinetContent() {
 
         {player && (
           <>
-            {/* Профиль */}
             <div className="flex items-center gap-4 bg-gray-800/50 rounded-2xl p-6">
               <img src={player.avatar} className="w-16 h-16 rounded-full" alt="" />
               <div>
@@ -193,7 +170,6 @@ function CabinetContent() {
               </div>
             </div>
 
-            {/* Цель */}
             <div className="bg-gray-800/50 rounded-2xl p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Target size={20} /> Цель на месяц</h2>
               {!goal ? (
@@ -220,7 +196,6 @@ function CabinetContent() {
               )}
             </div>
 
-            {/* График ELO */}
             <div className="bg-gray-800/50 rounded-2xl p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><TrendingUp size={20} /> История ELO</h2>
               {eloHistory.length > 1 ? (
@@ -238,21 +213,19 @@ function CabinetContent() {
               )}
             </div>
 
-            {/* Демки */}
             <div className="bg-gray-800/50 rounded-2xl p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Upload size={20} /> Анализ демок</h2>
 
-              {/* Ручная загрузка с клиентским парсингом */}
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-400 mb-2">Загрузить демку для анализа</h3>
                 <input
                   type="file"
                   accept=".dem"
-                  onChange={handleFileParse}
+                  onChange={handleFileUpload}
                   disabled={parsing}
                   className="mb-2 text-sm"
                 />
-                {parsing && <p className="text-yellow-400 text-sm mb-2">Идёт анализ... Это может занять до минуты.</p>}
+                {parsing && <p className="text-yellow-400 text-sm mb-2">Идёт анализ...</p>}
                 {parseResult && (
                   <div className="bg-gray-900/50 rounded-xl p-4 mb-4">
                     <p className="text-sm text-green-400 font-semibold mb-2">Результаты анализа:</p>
@@ -266,10 +239,9 @@ function CabinetContent() {
                     </div>
                   </div>
                 )}
-                <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2. Анализ происходит полностью в браузере.</p>
+                <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2.</p>
               </div>
 
-              {/* FACEIT демки */}
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-400 mb-2">Найти демки с FACEIT</h3>
                 <button
@@ -295,7 +267,6 @@ function CabinetContent() {
                 )}
               </div>
 
-              {/* История анализов */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-400 mb-2">История анализов</h3>
                 <button
@@ -334,56 +305,4 @@ export default function Cabinet() {
       <CabinetContent />
     </Suspense>
   )
-}
-
-// Функция извлечения метрик (реальные данные из событий)
-function extractMetrics(events: any[], playerName: string) {
-  const playerEvents = events.filter((e: any) =>
-    e.player_name === playerName || e.attacker_name === playerName || e.user_name === playerName
-  )
-
-  // Реакция: примерное время от начала раунда до первого выстрела
-  const reactions: number[] = []
-  let totalHits = 0
-  let headshots = 0
-  let totalShots = 0
-
-  for (const e of events) {
-    if (e.type === 'weapon_fire' && e.player_name === playerName) {
-      totalShots++
-    }
-    if (e.type === 'player_hurt' && e.attacker_name === playerName) {
-      totalHits++
-      if (e.hitgroup === 'head') headshots++
-    }
-    if (e.type === 'player_hurt' && e.attacker_name === playerName && e.tick) {
-      reactions.push(e.tick)
-    }
-  }
-
-  // Гранаты
-  const nadeEvents = events.filter((e: any) =>
-    (e.type === 'hegrenade_detonate' || e.type === 'flashbang_detonate') &&
-    e.player_name === playerName
-  )
-  const flashEvents = events.filter((e: any) =>
-    e.type === 'flashbang_detonate' && e.player_name === playerName
-  )
-  let flashSuccesses = 0
-  for (const fe of flashEvents) {
-    if (fe.blinded_players?.length > 0) flashSuccesses++
-  }
-
-  const utilityDamage = nadeEvents.reduce((s: number, e: any) => s + (e.damage || 0), 0)
-
-  return {
-    reactionAvg: reactions.length > 0 ? Math.round(reactions.reduce((a: number, b: number) => a + b, 0) / reactions.length) : 0,
-    accuracyHead: totalHits > 0 ? Math.round((headshots / totalHits) * 100) : 0,
-    accuracyBody: totalHits > 0 ? Math.round(((totalHits - headshots) / totalHits) * 100) : 0,
-    sprayDeviation: Math.round(Math.random() * 15 + 5), // Пока заглушка
-    utilityDamage,
-    flashSuccessRate: flashEvents.length > 0 ? Math.round((flashSuccesses / flashEvents.length) * 100) : 0,
-    positioningScore: Math.round(Math.random() * 40 + 50), // Пока заглушка
-    timingScore: Math.round(Math.random() * 40 + 50) // Пока заглушка
-  }
 }
