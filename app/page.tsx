@@ -28,6 +28,10 @@ export default function Landing() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
+<nav className="flex justify-end max-w-5xl mx-auto px-6 pt-4 gap-3">
+  <Link href="/login" className="text-gray-400 hover:text-white text-sm">Войти</Link>
+  <Link href="/signup" className="bg-blue-500 hover:bg-blue-600 px-4 py-1 rounded-lg text-sm font-semibold">Регистрация</Link>
+</nav>
       <section className="max-w-3xl mx-auto px-6 pt-24 pb-12 text-center">
         <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-full px-4 py-1.5 text-sm text-blue-400 mb-6">
           <Zap size={14} /> Бесплатный AI-чекап
