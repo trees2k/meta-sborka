@@ -28,7 +28,7 @@ export default function Landing() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
-<nav className="flex justify-end max-w-5xl mx-auto px-6 pt-4 gap-3">
+<nav className="w-full flex justify-end max-w-7xl mx-auto px-6 pt-4 gap-3">
   <Link href="/login" className="text-gray-400 hover:text-white text-sm">Войти</Link>
   <Link href="/signup" className="bg-blue-500 hover:bg-blue-600 px-4 py-1 rounded-lg text-sm font-semibold">Регистрация</Link>
 </nav>
