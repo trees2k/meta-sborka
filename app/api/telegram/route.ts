@@ -104,7 +104,7 @@ export async function POST(request: Request) {
           const previous = data.length > 1 ? data[1].elo : current
           const diff = current - previous
           const emoji = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️'
-          await sendMessage(chatId, `${faceitNick}: ${current} ELO ${emoji} ${diff >= 0 ? '+' : ''}${diff}\nПолная статистика: https://meta-sborka.vercel.app/cabinet?nickname=${faceitNick}`)
+          await sendMessage(chatId, `${faceitNick}: ${current} ELO ${emoji} ${diff >= 0 ? '+' : ''}${diff}\nПолная статистика: https://ufuture.ru/cabinet?nickname=${faceitNick}`)
         } else {
           await sendMessage(chatId, 'Нет данных ELO. Открой кабинет: https://ufuture.ru/cabinet?nickname=' + faceitNick)
         }
