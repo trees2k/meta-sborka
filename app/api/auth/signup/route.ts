@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import bcrypt from 'bcryptjs'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,30 +15,26 @@ export async function POST(request: Request) {
   }
 
   if (password.length < 6) {
-    return NextResponse.json({ error: 'Пароль должен быть минимум 6 символов' }, { status: 400 })
+    return NextResponse.json({ error: 'Пароль должен быть не менее 6 символов' }, { status: 400 })
   }
 
-  // Проверяем, есть ли уже такой email
-  const { data: existingUsers } = await supabase
+  const { data: existing } = await supabase
     .from('users')
     .select('id')
     .eq('email', email)
     .limit(1)
 
-  if (existingUsers && existingUsers.length > 0) {
+  if (existing && existing.length > 0) {
     return NextResponse.json({ error: 'Пользователь с таким email уже существует' }, { status: 409 })
   }
 
-  // Создаём пользователя
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true
-  })
+  const password_hash = await bcrypt.hash(password, 10)
+
+  const { error } = await supabase.from('users').insert({ email, password_hash })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, user: data.user })
+  return NextResponse.json({ ok: true, message: 'Регистрация успешна' })
 }
