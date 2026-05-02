@@ -19,7 +19,9 @@ function CabinetContent() {
   const [eloHistory, setEloHistory] = useState<any[]>([])
   const [demos, setDemos] = useState<any[]>([])
   const [demosLoading, setDemosLoading] = useState(false)
+  const [analyses, setAnalyses] = useState<any[]>([])
 
+  // Получаем никнейм из URL или localStorage
   useEffect(() => {
     const paramNick = searchParams.get('nickname')
     if (paramNick) {
@@ -31,22 +33,27 @@ function CabinetContent() {
     }
   }, [searchParams])
 
+  // Загружаем сохранённую цель
   useEffect(() => {
     if (!nickname) return
     const savedGoal = localStorage.getItem(`goal_${nickname}`)
     if (savedGoal) setGoal(JSON.parse(savedGoal))
   }, [nickname])
 
+  // Загружаем данные игрока и ELO
   useEffect(() => {
     if (!nickname) return
     setLoading(true)
     fetch(`/api/faceit?nickname=${encodeURIComponent(nickname)}`)
       .then(r => r.json())
       .then(data => {
-        if (data.error) { setError('Игрок не найден'); setPlayer(null) }
-        else {
+        if (data.error) {
+          setError('Игрок не найден')
+          setPlayer(null)
+        } else {
           setPlayer(data)
           setError('')
+          // Сохраняем текущий ELO в историю
           fetch('/api/elo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -54,9 +61,10 @@ function CabinetContent() {
           }).catch(() => {})
         }
       })
-      .catch(() => setError('Ошибка'))
+      .catch(() => setError('Ошибка загрузки'))
       .finally(() => setLoading(false))
 
+    // Загружаем историю ELO
     fetch(`/api/elo?nickname=${encodeURIComponent(nickname)}`)
       .then(r => r.json())
       .then(data => {
@@ -67,6 +75,7 @@ function CabinetContent() {
       .catch(() => {})
   }, [nickname])
 
+  // Установка цели
   const handleSetGoal = () => {
     if (!player || !targetInput) return
     const increase = parseInt(targetInput)
@@ -82,6 +91,7 @@ function CabinetContent() {
     setTargetInput('')
   }
 
+  // Поиск демок с FACEIT
   const handleFetchDemos = async () => {
     if (!nickname) return
     setDemosLoading(true)
@@ -96,6 +106,15 @@ function CabinetContent() {
     setDemosLoading(false)
   }
 
+  // Загрузка истории анализов
+  const handleFetchAnalyses = async () => {
+    if (!nickname) return
+    const res = await fetch(`/api/demo/history?nickname=${encodeURIComponent(nickname)}`)
+    const data = await res.json()
+    if (data.analyses) setAnalyses(data.analyses)
+  }
+
+  // Расчёт прогресса цели
   const progressPercent = goal && player
     ? Math.min(100, ((player.elo - goal.startElo) / (goal.targetElo - goal.startElo)) * 100)
     : 0
@@ -109,6 +128,7 @@ function CabinetContent() {
       <div className="max-w-4xl mx-auto space-y-8">
         <Link href="/" className="text-blue-500 hover:underline">← На главную</Link>
 
+        {/* Ввод никнейма, если не задан */}
         {!nickname && (
           <div className="text-center py-20">
             <h1 className="text-3xl font-bold mb-4">Введи никнейм Faceit</h1>
@@ -133,7 +153,7 @@ function CabinetContent() {
               </div>
             </div>
 
-            {/* Цель */}
+            {/* Цель на месяц */}
             <div className="bg-gray-800/50 rounded-2xl p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Target size={20} /> Цель на месяц</h2>
               {!goal ? (
@@ -181,33 +201,90 @@ function CabinetContent() {
             {/* Демки */}
             <div className="bg-gray-800/50 rounded-2xl p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Upload size={20} /> Анализ демок</h2>
-              <button
-                onClick={handleFetchDemos}
-                disabled={demosLoading}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 rounded-xl font-semibold"
-              >
-                {demosLoading ? 'Загрузка...' : 'Найти мои демки с FACEIT'}
-              </button>
-              <p className="text-gray-500 text-xs mt-2">Автоматически загружает последние 5 демок с FACEIT.</p>
 
-              {demos.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h3 className="text-sm font-semibold text-gray-400">Найденные демки:</h3>
-                  {demos.map((demo: any, i: number) => (
-                    <div key={i} className="bg-gray-900/50 rounded-xl p-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm">Матч #{demo.match_id?.slice(0, 8)}</p>
-                        <p className="text-xs text-gray-500">{new Date(demo.played_at).toLocaleDateString('ru-RU')}</p>
+              {/* Ручная загрузка */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-400 mb-2">Загрузить демку вручную</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault()
+                  const form = e.target as HTMLFormElement
+                  const fileInput = form.querySelector('input[type=file]') as HTMLInputElement
+                  if (!fileInput.files?.length) return
+                  const formData = new FormData()
+                  formData.append('demo', fileInput.files[0])
+                  formData.append('nickname', nickname)
+                  const res = await fetch('/api/demo/parse', { method: 'POST', body: formData })
+                  const data = await res.json()
+                  if (data.ok) {
+                    alert('Демка проанализирована! Обнови страницу.')
+                    window.location.reload()
+                  } else {
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'))
+                  }
+                }}>
+                  <input type="file" accept=".dem" className="mb-2 text-sm" />
+                  <button type="submit" className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold text-sm">
+                    Загрузить и проанализировать
+                  </button>
+                </form>
+                <p className="text-gray-500 text-xs mt-1">Поддерживаются .dem файлы CS2. Анализ занимает до минуты.</p>
+              </div>
+
+              {/* Автоматическая загрузка с FACEIT */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-400 mb-2">Найти демки с FACEIT</h3>
+                <button
+                  onClick={handleFetchDemos}
+                  disabled={demosLoading}
+                  className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-700 rounded-xl font-semibold text-sm"
+                >
+                  {demosLoading ? 'Загрузка...' : 'Найти мои демки'}
+                </button>
+                <p className="text-gray-500 text-xs mt-1">Автоматически находит последние 5 демок с FACEIT.</p>
+
+                {demos.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {demos.map((demo: any, i: number) => (
+                      <div key={i} className="bg-gray-900/50 rounded-xl p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm">Матч #{demo.match_id?.slice(0, 8)}</p>
+                        </div>
+                        {demo.demo_url ? (
+                          <a href={demo.demo_url} target="_blank" className="text-blue-400 hover:underline text-sm">Скачать</a>
+                        ) : (
+                          <span className="text-gray-500 text-sm">Нет демки</span>
+                        )}
                       </div>
-                      {demo.demo_url ? (
-                        <a href={demo.demo_url} target="_blank" className="text-blue-400 hover:underline text-sm">Скачать демку</a>
-                      ) : (
-                        <span className="text-gray-500 text-sm">Нет демки</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* История анализов */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-400 mb-2">История анализов</h3>
+                <button
+                  onClick={handleFetchAnalyses}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold text-sm mb-4"
+                >
+                  Загрузить историю
+                </button>
+                {analyses.length > 0 && (
+                  <div className="space-y-3">
+                    {analyses.map((a: any, i: number) => (
+                      <div key={i} className="bg-gray-900/50 rounded-xl p-4">
+                        <p className="text-sm text-gray-400">Анализ от {new Date(a.created_at).toLocaleDateString('ru-RU')}</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-sm">
+                          <div>Реакция: <span className="text-blue-400">{a.reaction_avg_ms} мс</span></div>
+                          <div>Хедшоты: <span className="text-green-400">{a.accuracy_head}%</span></div>
+                          <div>Флешки: <span className="text-yellow-400">{a.flash_success_rate}%</span></div>
+                          <div>Урон гранат: <span className="text-red-400">{a.utility_damage}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
