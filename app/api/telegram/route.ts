@@ -106,7 +106,7 @@ export async function POST(request: Request) {
           const emoji = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️'
           await sendMessage(chatId, `${faceitNick}: ${current} ELO ${emoji} ${diff >= 0 ? '+' : ''}${diff}\nПолная статистика: https://meta-sborka.vercel.app/cabinet?nickname=${faceitNick}`)
         } else {
-          await sendMessage(chatId, 'Нет данных ELO. Открой кабинет: https://meta-sborka.vercel.app/cabinet?nickname=' + faceitNick)
+          await sendMessage(chatId, 'Нет данных ELO. Открой кабинет: https://ufuture.ru/cabinet?nickname=' + faceitNick)
         }
         break
       }
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
         const avg = sleepData?.length
           ? (sleepData.reduce((a: number, b: any) => a + b.hours, 0) / sleepData.length).toFixed(1)
           : '—'
-        await sendMessage(chatId, `${faceitNick}:\nСредний сон за 7 дней: ${avg} ч\nПолная статистика: https://meta-sborka.vercel.app/cabinet?nickname=${faceitNick}`)
+        await sendMessage(chatId, `${faceitNick}:\nСредний сон за 7 дней: ${avg} ч\nПолная статистика: https://ufuture.ru/cabinet?nickname=${faceitNick}`)
         break
       }
 
