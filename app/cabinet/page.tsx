@@ -106,7 +106,7 @@ function CabinetContent() {
     if (data.analyses) setAnalyses(data.analyses)
   }
 
-  // Загрузка демки и парсинг через скрытый динамический импорт
+  // Загрузка демки на VPS через наш API
   const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !nickname) return
@@ -114,31 +114,21 @@ function CabinetContent() {
     setParsing(true)
     setParseResult(null)
 
+    const formData = new FormData()
+    formData.append('demo', file)
+    formData.append('nickname', nickname)
+
     try {
-      // Динамический импорт, который не видит Turbopack
-      const dynamicImport = new Function('specifier', 'return import(specifier)') as (s: string) => Promise<any>
-      const mod = await dynamicImport('demoparser2')
-      const parseFunc = mod.parseDemoBuffer || mod.default || mod.parseEvents
-
-      if (!parseFunc) {
-        throw new Error('Не найдена функция парсинга в demoparser2. Доступные ключи: ' + Object.keys(mod).join(', '))
+      const res = await fetch('/api/demo/parse', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.ok) {
+        setParseResult(data.data || data.stats) // используем data.data (сырой ответ VPS) или data.stats
+        alert('Демка проанализирована!')
+      } else {
+        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'))
       }
-
-      const buffer = await file.arrayBuffer()
-      const events = await parseFunc(buffer)
-      const stats = extractMetrics(events, nickname)
-      setParseResult(stats)
-
-      await fetch('/api/demo/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, stats })
-      })
-
-      alert('Демка проанализирована!')
     } catch (err: any) {
-      console.error('Parse error:', err)
-      alert('Ошибка парсинга: ' + err.message)
+      alert('Ошибка: ' + err.message)
     } finally {
       setParsing(false)
     }
@@ -235,27 +225,16 @@ function CabinetContent() {
                   disabled={parsing}
                   className="mb-2 text-sm"
                 />
-                {parsing && <p className="text-yellow-400 text-sm mb-2">Идёт анализ...</p>}
+                {parsing && <p className="text-yellow-400 text-sm mb-2">Идёт анализ... (отправка на VPS)</p>}
                 {parseResult && (
                   <div className="bg-gray-900/50 rounded-xl p-4 mb-4">
-                    <p className="text-sm text-green-400 font-semibold mb-2">Результаты анализа:</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                      <div>⚡ Реакция: <span className="text-blue-400">{parseResult.reactionAvg} мс</span></div>
-                      <div>🎯 Хедшоты: <span className="text-green-400">{parseResult.accuracyHead}%</span></div>
-                      <div>💪 Попадания в тело: <span className="text-yellow-400">{parseResult.accuracyBody}%</span></div>
-                      <div>💥 Спрей: <span className="text-red-400">{parseResult.sprayDeviation} px</span></div>
-                      <div>🔥 Урон гранат: <span className="text-orange-400">{parseResult.utilityDamage}</span></div>
-                      <div>💣 Флешки: <span className="text-purple-400">{parseResult.flashSuccessRate}%</span></div>
-                      <div>🗺️ Позиция: <span className="text-cyan-400">{parseResult.positioningScore}/100</span></div>
-                      <div>⏱️ Тайминги: <span className="text-pink-400">{parseResult.timingScore}/100</span></div>
-                      <div>🏆 Клатчи: <span className="text-emerald-400">{parseResult.clutchWins}</span></div>
-                      <div>💀 K/D: <span className="text-white">{parseResult.kdRatio}</span></div>
-                      <div>⚔️ ADR: <span className="text-white">{parseResult.adr}</span></div>
-                      <div>🔫 Всего убийств: <span className="text-white">{parseResult.totalKills}</span></div>
-                    </div>
+                    <p className="text-sm text-green-400 font-semibold mb-2">Результаты анализа (реальные данные):</p>
+                    <pre className="text-xs text-gray-300 overflow-auto max-h-60">
+                      {JSON.stringify(parseResult, null, 2)}
+                    </pre>
                   </div>
                 )}
-                <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2. Анализ происходит прямо в браузере — файл никуда не отправляется.</p>
+                <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2. Файл отправляется на наш VPS для анализа.</p>
               </div>
 
               <div className="mb-6">
@@ -321,48 +300,4 @@ export default function Cabinet() {
       <CabinetContent />
     </Suspense>
   )
-}
-
-function extractMetrics(events: any[], playerName: string) {
-  const reactions: number[] = []
-  let totalHits = 0
-  let headshots = 0
-
-  for (const e of events) {
-    if (e.type === 'player_hurt' && e.attacker_name === playerName) {
-      totalHits++
-      if (e.hitgroup === 'head') headshots++
-      if (e.tick) reactions.push(e.tick)
-    }
-  }
-
-  const nadeEvents = events.filter((e: any) =>
-    (e.type === 'hegrenade_detonate' || e.type === 'flashbang_detonate') &&
-    e.player_name === playerName
-  )
-  const flashEvents = events.filter((e: any) =>
-    e.type === 'flashbang_detonate' && e.player_name === playerName
-  )
-  let flashSuccesses = 0
-  for (const fe of flashEvents) {
-    if (fe.blinded_players?.length > 0) flashSuccesses++
-  }
-
-  const utilityDamage = nadeEvents.reduce((s: number, e: any) => s + (e.damage || 0), 0)
-
-  return {
-    reactionAvg: reactions.length > 0 ? Math.round(reactions.reduce((a, b) => a + b, 0) / reactions.length) : 0,
-    accuracyHead: totalHits > 0 ? Math.round((headshots / totalHits) * 100) : 0,
-    accuracyBody: totalHits > 0 ? Math.round(((totalHits - headshots) / totalHits) * 100) : 0,
-    sprayDeviation: Math.round(Math.random() * 15 + 5),
-    utilityDamage,
-    flashSuccessRate: flashEvents.length > 0 ? Math.round((flashSuccesses / flashEvents.length) * 100) : 0,
-    positioningScore: Math.round(Math.random() * 40 + 50),
-    timingScore: Math.round(Math.random() * 40 + 50),
-    clutchWins: Math.floor(Math.random() * 3),
-    totalKills: Math.floor(Math.random() * 20 + 10),
-    totalDeaths: Math.floor(Math.random() * 15 + 10),
-    adr: Math.floor(Math.random() * 40 + 60),
-    kdRatio: (Math.random() * 1.5 + 0.8).toFixed(2)
-  }
 }
