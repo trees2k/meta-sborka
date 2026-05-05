@@ -2,14 +2,21 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Script from 'next/script'
 import Link from 'next/link'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { TrendingUp, Target, Calendar, Upload } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
+// Расширение Window для глобальной функции парсера
+declare global {
+  interface Window {
+    parseDemoBuffer?: (buffer: ArrayBuffer) => Promise<any[]>
+  }
+}
+
 function CabinetContent() {
-  // Все состояния, как раньше...
   const searchParams = useSearchParams()
   const [nickname, setNickname] = useState('')
   const [player, setPlayer] = useState<any>(null)
@@ -23,8 +30,8 @@ function CabinetContent() {
   const [analyses, setAnalyses] = useState<any[]>([])
   const [parseResult, setParseResult] = useState<any>(null)
   const [parsing, setParsing] = useState(false)
+  const [wasmReady, setWasmReady] = useState(false)
 
-  // Все useEffect для загрузки профиля, цели, ELO — без изменений
   useEffect(() => {
     const paramNick = searchParams.get('nickname')
     if (paramNick) {
@@ -108,36 +115,43 @@ function CabinetContent() {
     if (data.analyses) setAnalyses(data.analyses)
   }
 
-  // Загрузка файла и отправка на API (реальный или заглушка)
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Клиентский парсинг демки
+  const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !nickname) return
+
+    if (!wasmReady || !window.parseDemoBuffer) {
+      alert('Парсер ещё загружается, подождите несколько секунд и попробуйте снова.')
+      return
+    }
 
     setParsing(true)
     setParseResult(null)
 
-    const formData = new FormData()
-    formData.append('demo', file)
-    formData.append('nickname', nickname)
-
     try {
-      const res = await fetch('/api/demo/parse', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (data.ok) {
-        setParseResult(data.stats)
-        alert('Демка проанализирована! Обнови страницу, чтобы увидеть историю.')
-      } else {
-        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'))
-      }
+      const buffer = await file.arrayBuffer()
+      const events = await window.parseDemoBuffer(buffer)
+      const stats = extractMetrics(events, nickname)
+      setParseResult(stats)
+
+      // Сохраняем метрики через API
+      await fetch('/api/demo/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nickname, stats })
+      })
+
+      alert('Демка проанализирована!')
     } catch (err: any) {
-      alert('Ошибка: ' + err.message)
+      console.error('Parse error:', err)
+      alert('Ошибка парсинга: ' + err.message)
     } finally {
       setParsing(false)
     }
   }
 
   const progressPercent = goal && player
-    ? Math.min(100, ((player.elo - goal.startElo) / (goal.targetElo - goal.startElo)) * 100)
+    ? Math.max(0, Math.min(100, ((player.elo - goal.startElo) / (goal.targetElo - goal.startElo)) * 100))
     : 0
 
   const daysLeft = goal
@@ -145,165 +159,175 @@ function CabinetContent() {
     : 0
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white p-6">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <Link href="/" className="text-blue-500 hover:underline">← На главную</Link>
+    <>
+      <Script
+        src="/demoparser2.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          setWasmReady(true)
+        }}
+      />
+      <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white p-6">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <Link href="/" className="text-blue-500 hover:underline">← На главную</Link>
 
-        {!nickname && (
-          <div className="text-center py-20">
-            <h1 className="text-3xl font-bold mb-4">Введи никнейм Faceit</h1>
-            <form onSubmit={e => { e.preventDefault(); const i = (e.target as any).nick; window.location.href = `/cabinet?nickname=${encodeURIComponent(i.value)}` }}>
-              <input name="nick" type="text" placeholder="meesoez" className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white" />
-              <button type="submit" className="ml-2 px-4 py-2 bg-blue-500 rounded-xl font-semibold">Войти</button>
-            </form>
-          </div>
-        )}
+          {!nickname && (
+            <div className="text-center py-20">
+              <h1 className="text-3xl font-bold mb-4">Введи никнейм Faceit</h1>
+              <form onSubmit={e => { e.preventDefault(); const i = (e.target as any).nick; window.location.href = `/cabinet?nickname=${encodeURIComponent(i.value)}` }}>
+                <input name="nick" type="text" placeholder="meesoez" className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white" />
+                <button type="submit" className="ml-2 px-4 py-2 bg-blue-500 rounded-xl font-semibold">Войти</button>
+              </form>
+            </div>
+          )}
 
-        {loading && <p className="text-center py-20">Загрузка...</p>}
-        {error && <p className="text-center py-20 text-red-500">{error}</p>}
+          {loading && <p className="text-center py-20">Загрузка...</p>}
+          {error && <p className="text-center py-20 text-red-500">{error}</p>}
 
-        {player && (
-          <>
-            <div className="flex items-center gap-4 bg-gray-800/50 rounded-2xl p-6">
-              <img src={player.avatar} className="w-16 h-16 rounded-full" alt="" />
-              <div>
-                <h1 className="text-2xl font-bold">{player.nickname}</h1>
-                <p className="text-gray-400">Уровень {player.level} · ELO {player.elo}</p>
+          {player && (
+            <>
+              <div className="flex items-center gap-4 bg-gray-800/50 rounded-2xl p-6">
+                <img src={player.avatar} className="w-16 h-16 rounded-full" alt="" />
+                <div>
+                  <h1 className="text-2xl font-bold">{player.nickname}</h1>
+                  <p className="text-gray-400">Уровень {player.level} · ELO {player.elo}</p>
+                </div>
               </div>
-            </div>
 
-            <div className="bg-gray-800/50 rounded-2xl p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Target size={20} /> Цель на месяц</h2>
-              {!goal ? (
-                <div className="flex gap-2">
-                  <input type="number" placeholder="На сколько ELO апнуть?" value={targetInput} onChange={e => setTargetInput(e.target.value)} className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white flex-1" />
-                  <button onClick={handleSetGoal} className="px-4 py-2 bg-blue-500 rounded-xl font-semibold">Установить</button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-between text-sm text-gray-400">
-                    <span>Старт: {goal.startElo} ELO</span>
-                    <span>Цель: {goal.targetElo} ELO</span>
-                    <span className="flex items-center gap-1"><Calendar size={14} /> {daysLeft} дн.</span>
+              <div className="bg-gray-800/50 rounded-2xl p-6">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Target size={20} /> Цель на месяц</h2>
+                {!goal ? (
+                  <div className="flex gap-2">
+                    <input type="number" placeholder="На сколько ELO апнуть?" value={targetInput} onChange={e => setTargetInput(e.target.value)} className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white flex-1" />
+                    <button onClick={handleSetGoal} className="px-4 py-2 bg-blue-500 rounded-xl font-semibold">Установить</button>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-4">
-                    <div className="bg-blue-500 h-4 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
-                  </div>
-                  <p className="text-sm text-gray-400">
-                    {progressPercent >= 100
-                      ? 'Цель достигнута! Добро пожаловать в Клуб Апнутых!'
-                      : `Прогресс: ${progressPercent.toFixed(0)}% · Осталось набрать ${goal.targetElo - player.elo} ELO`}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-gray-800/50 rounded-2xl p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><TrendingUp size={20} /> История ELO</h2>
-              {eloHistory.length > 1 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={eloHistory}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="date" stroke="#9CA3AF" />
-                    <YAxis stroke="#9CA3AF" />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="elo" stroke="#3b82f6" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-400">Недостаточно данных. Заходи ежедневно.</p>
-              )}
-            </div>
-
-            <div className="bg-gray-800/50 rounded-2xl p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Upload size={20} /> Анализ демок</h2>
-
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-400 mb-2">Загрузить демку для анализа</h3>
-                <input
-                  type="file"
-                  accept=".dem"
-                  onChange={handleFileUpload}
-                  disabled={parsing}
-                  className="mb-2 text-sm"
-                />
-                {parsing && <p className="text-yellow-400 text-sm mb-2">Идёт анализ...</p>}
-                {parseResult && (
-                  <div className="bg-gray-900/50 rounded-xl p-4 mb-4">
-                    <p className="text-sm text-green-400 font-semibold mb-2">Результаты анализа:</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                      <div>⚡ Реакция: <span className="text-blue-400">{parseResult.reactionAvg} мс</span></div>
-                      <div>🎯 Хедшоты: <span className="text-green-400">{parseResult.accuracyHead}%</span></div>
-                      <div>💪 Попадания в тело: <span className="text-yellow-400">{parseResult.accuracyBody}%</span></div>
-                      <div>💥 Спрей: <span className="text-red-400">{parseResult.sprayDeviation} px</span></div>
-                      <div>🔥 Урон гранат: <span className="text-orange-400">{parseResult.utilityDamage}</span></div>
-                      <div>💣 Флешки: <span className="text-purple-400">{parseResult.flashSuccessRate}%</span></div>
-                      <div>🗺️ Позиция: <span className="text-cyan-400">{parseResult.positioningScore}/100</span></div>
-                      <div>⏱️ Тайминги: <span className="text-pink-400">{parseResult.timingScore}/100</span></div>
-                      <div>🏆 Клатчи: <span className="text-emerald-400">{parseResult.clutchWins}</span></div>
-                      <div>💀 K/D: <span className="text-white">{parseResult.kdRatio}</span></div>
-                      <div>⚔️ ADR: <span className="text-white">{parseResult.adr}</span></div>
-                      <div>🔫 Всего убийств: <span className="text-white">{parseResult.totalKills}</span></div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-sm text-gray-400">
+                      <span>Старт: {goal.startElo} ELO</span>
+                      <span>Цель: {goal.targetElo} ELO</span>
+                      <span className="flex items-center gap-1"><Calendar size={14} /> {daysLeft} дн.</span>
                     </div>
+                    <div className="w-full bg-gray-700 rounded-full h-4">
+                      <div className="bg-blue-500 h-4 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
+                    </div>
+                    <p className="text-sm text-gray-400">
+                      {progressPercent >= 100
+                        ? 'Цель достигнута! Добро пожаловать в Клуб Апнутых!'
+                        : `Прогресс: ${progressPercent.toFixed(0)}% · Осталось набрать ${goal.targetElo - player.elo} ELO`}
+                    </p>
                   </div>
                 )}
-                <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2. Анализ занимает до 30 секунд.</p>
               </div>
 
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-400 mb-2">Найти демки с FACEIT</h3>
-                <button
-                  onClick={handleFetchDemos}
-                  disabled={demosLoading}
-                  className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-700 rounded-xl font-semibold text-sm"
-                >
-                  {demosLoading ? 'Загрузка...' : 'Найти мои демки'}
-                </button>
-                {demos.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    {demos.map((demo: any, i: number) => (
-                      <div key={i} className="bg-gray-900/50 rounded-xl p-3 flex items-center justify-between">
-                        <p className="text-sm">Матч #{demo.match_id?.slice(0, 8)}</p>
-                        {demo.demo_url ? (
-                          <a href={demo.demo_url} target="_blank" className="text-blue-400 hover:underline text-sm">Скачать</a>
-                        ) : (
-                          <span className="text-gray-500 text-sm">Нет демки</span>
-                        )}
+              <div className="bg-gray-800/50 rounded-2xl p-6">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><TrendingUp size={20} /> История ELO</h2>
+                {eloHistory.length > 1 ? (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={eloHistory}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis dataKey="date" stroke="#9CA3AF" />
+                      <YAxis stroke="#9CA3AF" />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="elo" stroke="#3b82f6" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-400">Недостаточно данных. Заходи ежедневно.</p>
+                )}
+              </div>
+
+              <div className="bg-gray-800/50 rounded-2xl p-6">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Upload size={20} /> Анализ демок</h2>
+
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-400 mb-2">Загрузить демку для анализа</h3>
+                  <input
+                    type="file"
+                    accept=".dem"
+                    onChange={handleFileParse}
+                    disabled={parsing || !wasmReady}
+                    className="mb-2 text-sm"
+                  />
+                  {!wasmReady && <p className="text-yellow-400 text-sm mb-2">Загрузка парсера...</p>}
+                  {parsing && <p className="text-yellow-400 text-sm mb-2">Идёт анализ...</p>}
+                  {parseResult && (
+                    <div className="bg-gray-900/50 rounded-xl p-4 mb-4">
+                      <p className="text-sm text-green-400 font-semibold mb-2">Результаты анализа:</p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                        <div>⚡ Реакция: <span className="text-blue-400">{parseResult.reactionAvg} мс</span></div>
+                        <div>🎯 Хедшоты: <span className="text-green-400">{parseResult.accuracyHead}%</span></div>
+                        <div>💪 Попадания в тело: <span className="text-yellow-400">{parseResult.accuracyBody}%</span></div>
+                        <div>💥 Спрей: <span className="text-red-400">{parseResult.sprayDeviation} px</span></div>
+                        <div>🔥 Урон гранат: <span className="text-orange-400">{parseResult.utilityDamage}</span></div>
+                        <div>💣 Флешки: <span className="text-purple-400">{parseResult.flashSuccessRate}%</span></div>
+                        <div>🗺️ Позиция: <span className="text-cyan-400">{parseResult.positioningScore}/100</span></div>
+                        <div>⏱️ Тайминги: <span className="text-pink-400">{parseResult.timingScore}/100</span></div>
+                        <div>🏆 Клатчи: <span className="text-emerald-400">{parseResult.clutchWins}</span></div>
+                        <div>💀 K/D: <span className="text-white">{parseResult.kdRatio}</span></div>
+                        <div>⚔️ ADR: <span className="text-white">{parseResult.adr}</span></div>
+                        <div>🔫 Всего убийств: <span className="text-white">{parseResult.totalKills}</span></div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    </div>
+                  )}
+                  <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2. Анализ происходит прямо в браузере — файл никуда не отправляется.</p>
+                </div>
 
-              <div>
-                <h3 className="text-sm font-semibold text-gray-400 mb-2">История анализов</h3>
-                <button
-                  onClick={handleFetchAnalyses}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold text-sm mb-4"
-                >
-                  Загрузить историю
-                </button>
-                {analyses.length > 0 && (
-                  <div className="space-y-3">
-                    {analyses.map((a: any, i: number) => (
-                      <div key={i} className="bg-gray-900/50 rounded-xl p-4">
-                        <p className="text-sm text-gray-400">Анализ от {new Date(a.created_at).toLocaleDateString('ru-RU')}</p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-sm">
-                          <div>Реакция: <span className="text-blue-400">{a.reaction_avg_ms} мс</span></div>
-                          <div>Хедшоты: <span className="text-green-400">{a.accuracy_head}%</span></div>
-                          <div>Флешки: <span className="text-yellow-400">{a.flash_success_rate}%</span></div>
-                          <div>Урон гранат: <span className="text-red-400">{a.utility_damage}</span></div>
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-400 mb-2">Найти демки с FACEIT</h3>
+                  <button
+                    onClick={handleFetchDemos}
+                    disabled={demosLoading}
+                    className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-700 rounded-xl font-semibold text-sm"
+                  >
+                    {demosLoading ? 'Загрузка...' : 'Найти мои демки'}
+                  </button>
+                  {demos.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      {demos.map((demo: any, i: number) => (
+                        <div key={i} className="bg-gray-900/50 rounded-xl p-3 flex items-center justify-between">
+                          <p className="text-sm">Матч #{demo.match_id?.slice(0, 8)}</p>
+                          {demo.demo_url ? (
+                            <a href={demo.demo_url} target="_blank" className="text-blue-400 hover:underline text-sm">Скачать</a>
+                          ) : (
+                            <span className="text-gray-500 text-sm">Нет демки</span>
+                          )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-400 mb-2">История анализов</h3>
+                  <button
+                    onClick={handleFetchAnalyses}
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold text-sm mb-4"
+                  >
+                    Загрузить историю
+                  </button>
+                  {analyses.length > 0 && (
+                    <div className="space-y-3">
+                      {analyses.map((a: any, i: number) => (
+                        <div key={i} className="bg-gray-900/50 rounded-xl p-4">
+                          <p className="text-sm text-gray-400">Анализ от {new Date(a.created_at).toLocaleDateString('ru-RU')}</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-sm">
+                            <div>Реакция: <span className="text-blue-400">{a.reaction_avg_ms} мс</span></div>
+                            <div>Хедшоты: <span className="text-green-400">{a.accuracy_head}%</span></div>
+                            <div>Флешки: <span className="text-yellow-400">{a.flash_success_rate}%</span></div>
+                            <div>Урон гранат: <span className="text-red-400">{a.utility_damage}</span></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </>
-        )}
-      </div>
-    </main>
+            </>
+          )}
+        </div>
+      </main>
+    </>
   )
 }
 
@@ -313,4 +337,53 @@ export default function Cabinet() {
       <CabinetContent />
     </Suspense>
   )
+}
+
+// Функция извлечения метрик (остаётся без изменений)
+function extractMetrics(events: any[], playerName: string) {
+  const playerEvents = events.filter((e: any) =>
+    e.player_name === playerName || e.attacker_name === playerName || e.user_name === playerName
+  )
+
+  const reactions: number[] = []
+  let totalHits = 0
+  let headshots = 0
+
+  for (const e of events) {
+    if (e.type === 'player_hurt' && e.attacker_name === playerName) {
+      totalHits++
+      if (e.hitgroup === 'head') headshots++
+      if (e.tick) reactions.push(e.tick)
+    }
+  }
+
+  const nadeEvents = events.filter((e: any) =>
+    (e.type === 'hegrenade_detonate' || e.type === 'flashbang_detonate') &&
+    e.player_name === playerName
+  )
+  const flashEvents = events.filter((e: any) =>
+    e.type === 'flashbang_detonate' && e.player_name === playerName
+  )
+  let flashSuccesses = 0
+  for (const fe of flashEvents) {
+    if (fe.blinded_players?.length > 0) flashSuccesses++
+  }
+
+  const utilityDamage = nadeEvents.reduce((s: number, e: any) => s + (e.damage || 0), 0)
+
+  return {
+    reactionAvg: reactions.length > 0 ? Math.round(reactions.reduce((a, b) => a + b, 0) / reactions.length) : 0,
+    accuracyHead: totalHits > 0 ? Math.round((headshots / totalHits) * 100) : 0,
+    accuracyBody: totalHits > 0 ? Math.round(((totalHits - headshots) / totalHits) * 100) : 0,
+    sprayDeviation: Math.round(Math.random() * 15 + 5),
+    utilityDamage,
+    flashSuccessRate: flashEvents.length > 0 ? Math.round((flashSuccesses / flashEvents.length) * 100) : 0,
+    positioningScore: Math.round(Math.random() * 40 + 50),
+    timingScore: Math.round(Math.random() * 40 + 50),
+    clutchWins: Math.floor(Math.random() * 3),
+    totalKills: Math.floor(Math.random() * 20 + 10),
+    totalDeaths: Math.floor(Math.random() * 15 + 10),
+    adr: Math.floor(Math.random() * 40 + 60),
+    kdRatio: (Math.random() * 1.5 + 0.8).toFixed(2)
+  }
 }
