@@ -161,22 +161,18 @@ function CabinetContent() {
   return (
     <>
       <Script
-  src="/demoparser2.js"
-  strategy="beforeInteractive"
+  src="https://cdn.jsdelivr.net/npm/demoparser2@latest/dist/demoparser2.js"
+  strategy="afterInteractive"
   onLoad={() => {
-    console.log('demoparser2.js loaded')
-    // Даём WASM время на инициализацию
     setTimeout(() => {
-      if (window.parseDemoBuffer) {
+      const dp = (window as any).demoparser2
+      if (dp && dp.parseDemoBuffer) {
         setWasmReady(true)
-        console.log('Parser ready')
+        console.log('Parser ready via CDN')
       } else {
-        console.error('parseDemoBuffer not found after load')
+        console.error('CDN parser not found')
       }
-    }, 1000)
-  }}
-  onError={(e) => {
-    console.error('Failed to load demoparser2.js', e)
+    }, 2000)
   }}
 />
       <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white p-6">
