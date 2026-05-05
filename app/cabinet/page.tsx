@@ -107,32 +107,33 @@ function CabinetContent() {
   }
 
   // Загрузка демки на VPS через наш API
-  const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !nickname) return
+  const VPS_URL = 'http://45.38.42.28:8000/analyze'
 
-    setParsing(true)
-    setParseResult(null)
+const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0]
+  if (!file || !nickname) return
 
-    const formData = new FormData()
-    formData.append('demo', file)
-    formData.append('nickname', nickname)
+  setParsing(true)
+  setParseResult(null)
 
-    try {
-      const res = await fetch('/api/demo/parse', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (data.ok) {
-        setParseResult(data.data || data.stats) // используем data.data (сырой ответ VPS) или data.stats
-        alert('Демка проанализирована!')
-      } else {
-        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'))
-      }
-    } catch (err: any) {
-      alert('Ошибка: ' + err.message)
-    } finally {
-      setParsing(false)
+  const formData = new FormData()
+  formData.append('file', file)   // обязательно ключ "file", как ожидает FastAPI
+
+  try {
+    const res = await fetch(VPS_URL, { method: 'POST', body: formData })
+    const data = await res.json()
+    if (data.status === 'ok') {
+      setParseResult(data.data)
+      alert('Демка проанализирована!')
+    } else {
+      alert('Ошибка VPS: ' + (data.detail || 'Неизвестная ошибка'))
     }
+  } catch (err: any) {
+    alert('Ошибка соединения с VPS: ' + err.message)
+  } finally {
+    setParsing(false)
   }
+}
 
   const progressPercent = goal && player
     ? Math.max(0, Math.min(100, ((player.elo - goal.startElo) / (goal.targetElo - goal.startElo)) * 100))
