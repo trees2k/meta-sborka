@@ -161,12 +161,24 @@ function CabinetContent() {
   return (
     <>
       <Script
-        src="/demoparser2.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          setWasmReady(true)
-        }}
-      />
+  src="/demoparser2.js"
+  strategy="beforeInteractive"
+  onLoad={() => {
+    console.log('demoparser2.js loaded')
+    // Даём WASM время на инициализацию
+    setTimeout(() => {
+      if (window.parseDemoBuffer) {
+        setWasmReady(true)
+        console.log('Parser ready')
+      } else {
+        console.error('parseDemoBuffer not found after load')
+      }
+    }, 1000)
+  }}
+  onError={(e) => {
+    console.error('Failed to load demoparser2.js', e)
+  }}
+/>
       <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white p-6">
         <div className="max-w-4xl mx-auto space-y-8">
           <Link href="/" className="text-blue-500 hover:underline">← На главную</Link>
