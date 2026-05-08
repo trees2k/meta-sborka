@@ -107,7 +107,7 @@ function CabinetContent() {
   }
 
   // Загрузка демки на VPS через наш API
-  const VPS_URL = 'https://82.114.228.147:8000/analyze'
+  const VPS_URL = 'https://fd3bf9f8ae2e95a8-82-114-228-147.serveousercontent.com/analyze'
 
 const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0]
