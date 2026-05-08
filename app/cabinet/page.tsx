@@ -107,7 +107,7 @@ function CabinetContent() {
   }
 
   // Загрузка демки на VPS через наш API
-  const VPS_URL = 'https://xxxx.ngrok-free.app/analyze'   // ← твой URL
+  const VPS_URL = 'https://82.114.228.147/analyze'
 
 const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0]
