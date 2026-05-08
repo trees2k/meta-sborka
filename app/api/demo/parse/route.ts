@@ -15,11 +15,7 @@ export async function POST(request: Request) {
     const vpsFormData = new FormData()
     vpsFormData.append('file', file)
 
-    const vpsRes = await fetch(VPS_URL, {
-      method: 'POST',
-      body: vpsFormData
-    })
-
+    const vpsRes = await fetch(VPS_URL, { method: 'POST', body: vpsFormData })
     const vpsData = await vpsRes.json()
 
     if (vpsData.status !== 'ok') {
