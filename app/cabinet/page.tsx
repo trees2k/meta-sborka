@@ -117,19 +117,20 @@ const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
   setParseResult(null)
 
   const formData = new FormData()
-  formData.append('file', file)   // обязательно ключ "file", как ожидает FastAPI
+  formData.append('demo', file)
+  formData.append('nickname', nickname)
 
   try {
-    const res = await fetch(VPS_URL, { method: 'POST', body: formData })
+    const res = await fetch('/api/demo/parse', { method: 'POST', body: formData })
     const data = await res.json()
-    if (data.status === 'ok') {
+    if (data.ok) {
       setParseResult(data.data)
       alert('Демка проанализирована!')
     } else {
-      alert('Ошибка VPS: ' + (data.detail || 'Неизвестная ошибка'))
+      alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'))
     }
   } catch (err: any) {
-    alert('Ошибка соединения с VPS: ' + err.message)
+    alert('Ошибка: ' + err.message)
   } finally {
     setParsing(false)
   }
