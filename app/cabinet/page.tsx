@@ -107,7 +107,7 @@ function CabinetContent() {
   }
 
   // Загрузка демки на VPS через наш API
-  const VPS_URL = 'https://bore.pub:61089/analyze'
+  const VPS_URL = 'https://gy-incorporated-specialist-trout.trycloudflare.com/analyze'
 
 const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0]
