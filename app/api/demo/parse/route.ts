@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
-import https from 'https'
 
-const VPS_URL = 'https://82.114.228.147:8000/analyze'
-const agent = new https.Agent({ rejectUnauthorized: false })
+const VPS_URL = 'http://82.114.228.147:8000/analyze'
 
 export async function POST(request: Request) {
   const formData = await request.formData()
@@ -19,8 +17,7 @@ export async function POST(request: Request) {
 
     const vpsRes = await fetch(VPS_URL, {
       method: 'POST',
-      body: vpsFormData,
-      agent
+      body: vpsFormData
     })
 
     const vpsData = await vpsRes.json()
