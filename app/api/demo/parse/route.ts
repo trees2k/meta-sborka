@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const VPS_URL = 'https://concentrations-drew-resident-ingredients.trycloudflare.com/analyze'
-
+const VPS_URL = 'https://advised-frozen-instruction-roster.trycloudflare.com/analyze'
 export async function POST(request: Request) {
   const formData = await request.formData()
   const file = formData.get('demo') as File
