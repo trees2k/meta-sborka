@@ -118,34 +118,31 @@ function CabinetContent() {
 
   // Реальный анализ демок через demoparser2
   const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !nickname) return
+  const file = e.target.files?.[0]
+  if (!file || !nickname) return
 
-    setParsing(true)
-    setParseResult(null)
+  setParsing(true)
+  setParseResult(null)
 
-    try {
-      const parseFunc = await loadParser()
-      const buffer = await file.arrayBuffer()
-      const events = await parseFunc(buffer)
-      const stats = extractMetrics(events, nickname)
-      setParseResult(stats)
+  const formData = new FormData()
+  formData.append('demo', file)
+  formData.append('nickname', nickname)
 
-      await fetch('/api/demo/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, stats })
-      })
-
+  try {
+    const res = await fetch('/api/demo/parse', { method: 'POST', body: formData })
+    const data = await res.json()
+    if (data.ok) {
+      setParseResult(data.data)
       alert('Демка проанализирована!')
-    } catch (err: any) {
-      console.error('Parse error:', err)
-      alert('Ошибка парсинга: ' + err.message)
-    } finally {
-      setParsing(false)
+    } else {
+      alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'))
     }
+  } catch (err: any) {
+    alert('Ошибка: ' + err.message)
+  } finally {
+    setParsing(false)
   }
-
+}
   const progressPercent = goal && player
     ? Math.max(0, Math.min(100, ((player.elo - goal.startElo) / (goal.targetElo - goal.startElo)) * 100))
     : 0
