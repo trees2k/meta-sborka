@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const VPS_URL = 'http://82.114.228.147:8000/analyze'
+const VPS_URL = 'http://178.20.208.97/analyze'
 
 export async function POST(request: Request) {
   const formData = await request.formData()
@@ -16,13 +16,25 @@ export async function POST(request: Request) {
     vpsFormData.append('file', file)
 
     const vpsRes = await fetch(VPS_URL, { method: 'POST', body: vpsFormData })
-    const vpsData = await vpsRes.json()
+    const text = await vpsRes.text()
 
-    if (vpsData.status !== 'ok') {
-      return NextResponse.json({ error: vpsData.detail || 'Ошибка анализа' }, { status: 500 })
+    console.log('VPS response status:', vpsRes.status)
+    console.log('VPS response body (первые 200 символов):', text.substring(0, 200))
+
+    let data
+    try {
+      data = JSON.parse(text)
+    } catch {
+      return NextResponse.json({
+        error: 'VPS ответил не JSON. Первые 200 символов: ' + text.substring(0, 200)
+      }, { status: 500 })
     }
 
-    return NextResponse.json({ ok: true, data: vpsData.data })
+    if (data.status !== 'ok') {
+      return NextResponse.json({ error: data.detail || 'Ошибка анализа' }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, data: data.data })
   } catch (err: any) {
     return NextResponse.json({ error: 'Ошибка при анализе: ' + err.message }, { status: 500 })
   }
