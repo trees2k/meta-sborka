@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const VPS_URL = 'http://bore.pub:32842/analyze' // ← вставь свой порт
+const VPS_URL = 'http://bore.pub:30491/analyze' // ← вставь свой порт
 
 export async function POST(request: Request) {
   const formData = await request.formData()
