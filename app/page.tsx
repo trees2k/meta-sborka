@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Zap, TrendingUp, Clock, Target, Shield, Frown, Users } from 'lucide-react'
+import { ArrowRight, Zap, TrendingUp, Clock, Target, Shield, Frown, Users, Play } from 'lucide-react'
 
 export default function Landing() {
   const [nickname, setNickname] = useState('')
@@ -28,10 +28,6 @@ export default function Landing() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
-<nav className="w-full flex justify-end max-w-7xl mx-auto px-6 pt-4 gap-3">
-  <Link href="/login" className="text-gray-400 hover:text-white text-sm">Войти</Link>
-  <Link href="/signup" className="bg-blue-500 hover:bg-blue-600 px-4 py-1 rounded-lg text-sm font-semibold">Регистрация</Link>
-</nav>
       <section className="max-w-3xl mx-auto px-6 pt-24 pb-12 text-center">
         <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-full px-4 py-1.5 text-sm text-blue-400 mb-6">
           <Zap size={14} /> Бесплатный AI-чекап
@@ -123,6 +119,15 @@ export default function Landing() {
           <p className="text-gray-400 text-sm">Заполни анкету — соберём идеальный состав.</p>
           <Link href="/anketa" className="inline-block mt-4 text-blue-400 hover:underline text-sm">Заполнить →</Link>
         </div>
+      </section>
+
+      {/* Новая карточка — Лента хайлайтов */}
+      <section className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Link href="/highlights" className="bg-gray-800/50 rounded-2xl p-8 text-center hover:bg-gray-800 transition-all">
+          <Play className="text-blue-400 mx-auto mb-4" size={24} />
+          <h3 className="font-semibold text-lg mb-2">Лента хайлайтов</h3>
+          <p className="text-gray-400 text-sm">Смотри и делись лучшими моментами.</p>
+        </Link>
       </section>
 
       <section className="max-w-2xl mx-auto px-6 py-16 text-center">
