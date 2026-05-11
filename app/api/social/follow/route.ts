@@ -15,9 +15,14 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
+
 export async function DELETE(request: Request) {
   const { follower, followee } = await request.json()
-  const { error } = await supabase.from('follows').delete().eq('follower_nickname', follower).eq('followee_nickname', followee)
+  const { error } = await supabase
+    .from('follows')
+    .delete()
+    .eq('follower_nickname', follower)
+    .eq('followee_nickname', followee)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

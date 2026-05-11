@@ -23,9 +23,10 @@ export default function ProfilePage() {
       .then(r => r.json())
       .then(data => setHighlights(data.highlights || []))
 
-    // Статус подписки (если текущий пользователь залогинен)
+    // Статус подписки
     const currentUser = localStorage.getItem('currentNickname')
     if (currentUser) {
+      // Проверяем, подписан ли текущий пользователь на этот профиль
       fetch(`/api/social/follow?follower=${currentUser}&followee=${nickname}`)
         .then(r => r.json())
         .then(data => setIsFollowing(data.following))
@@ -78,16 +79,7 @@ export default function ProfilePage() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {highlights.map((h: any) => (
-              <div key={h.id} className="bg-gray-800/50 rounded-2xl overflow-hidden">
-                <video src={h.video_url} controls className="w-full aspect-video object-cover" />
-                <div className="p-4">
-                  <p className="font-semibold">{h.title || 'Без названия'}</p>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                    <LikeButton highlightId={h.id} />
-                    <CommentButton highlightId={h.id} />
-                  </div>
-                </div>
-              </div>
+              <HighlightCard key={h.id} highlight={h} />
             ))}
           </div>
         )}
@@ -96,52 +88,88 @@ export default function ProfilePage() {
   )
 }
 
-// Компоненты-заглушки для лайков и комментариев (реализуем отдельно)
-function LikeButton({ highlightId }: { highlightId: number }) {
+// Компонент карточки хайлайта с лайками и комментариями
+function HighlightCard({ highlight }: { highlight: any }) {
   const [liked, setLiked] = useState(false)
-  const [count, setCount] = useState(0)
-  useEffect(() => {
-    fetch(`/api/social/like?highlight_id=${highlightId}`)
-      .then(r => r.json())
-      .then(data => { setCount(data.count || 0); setLiked(data.liked) })
-  }, [highlightId])
-  const toggle = async () => {
-    const user = localStorage.getItem('currentNickname') || 'anonymous'
-    await fetch('/api/social/like', {
-      method: liked ? 'DELETE' : 'POST',
-      body: JSON.stringify({ user_nickname: user, highlight_id: highlightId })
-    })
-    setLiked(!liked)
-    setCount(liked ? count - 1 : count + 1)
-  }
-  return <button onClick={toggle}>❤️ {count}</button>
-}
-
-function CommentButton({ highlightId }: { highlightId: number }) {
+  const [likeCount, setLikeCount] = useState(0)
   const [comments, setComments] = useState<any[]>([])
-  const [open, setOpen] = useState(false)
+  const [showComments, setShowComments] = useState(false)
+  const [commentText, setCommentText] = useState('')
+
   useEffect(() => {
-    fetch(`/api/social/comment?highlight_id=${highlightId}`)
+    // Загружаем количество лайков и статус
+    fetch(`/api/social/like?highlight_id=${highlight.id}`)
+      .then(r => r.json())
+      .then(data => {
+        setLikeCount(data.count || 0)
+        setLiked(data.liked || false)
+      })
+    // Загружаем комментарии
+    fetch(`/api/social/comment?highlight_id=${highlight.id}`)
       .then(r => r.json())
       .then(data => setComments(data.comments || []))
-  }, [highlightId, open])
-  const addComment = async (text: string) => {
+  }, [highlight.id])
+
+  const toggleLike = async () => {
     const user = localStorage.getItem('currentNickname') || 'anonymous'
-    await fetch('/api/social/comment', {
-      method: 'POST',
-      body: JSON.stringify({ highlight_id: highlightId, user_nickname: user, text })
+    const res = await fetch('/api/social/like', {
+      method: liked ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_nickname: user, highlight_id: highlight.id })
     })
-    setOpen(false)
+    if (res.ok) {
+      setLiked(!liked)
+      setLikeCount(liked ? likeCount - 1 : likeCount + 1)
+    }
   }
+
+  const addComment = async () => {
+    if (!commentText.trim()) return
+    const user = localStorage.getItem('currentNickname') || 'anonymous'
+    const res = await fetch('/api/social/comment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ highlight_id: highlight.id, user_nickname: user, text: commentText })
+    })
+    if (res.ok) {
+      setCommentText('')
+      setShowComments(false)
+      // Обновляем комментарии
+      const updated = await fetch(`/api/social/comment?highlight_id=${highlight.id}`)
+      const data = await updated.json()
+      setComments(data.comments || [])
+    }
+  }
+
   return (
-    <div>
-      <button onClick={() => setOpen(!open)}>💬 {comments.length}</button>
-      {open && (
-        <div className="mt-2 bg-gray-900 p-2 rounded">
-          {comments.map(c => <p key={c.id} className="text-xs"><strong>{c.user_nickname}:</strong> {c.text}</p>)}
-          <input onKeyDown={e => { if (e.key === 'Enter') { addComment((e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = '' } }} placeholder="Комментарий..." className="w-full mt-2 px-2 py-1 text-black rounded text-sm" />
+    <div className="bg-gray-800/50 rounded-2xl overflow-hidden">
+      <video src={highlight.video_url} controls className="w-full aspect-video object-cover" />
+      <div className="p-4">
+        <p className="font-semibold">{highlight.title || 'Без названия'}</p>
+        <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
+          <button onClick={toggleLike} className={liked ? 'text-red-400' : ''}>
+            ❤️ {likeCount}
+          </button>
+          <button onClick={() => setShowComments(!showComments)}>💬 {comments.length}</button>
         </div>
-      )}
+        {showComments && (
+          <div className="mt-2 bg-gray-900 p-2 rounded max-h-40 overflow-y-auto">
+            {comments.map(c => (
+              <p key={c.id} className="text-xs"><strong>{c.user_nickname}:</strong> {c.text}</p>
+            ))}
+            <div className="flex gap-2 mt-2">
+              <input
+                value={commentText}
+                onChange={e => setCommentText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addComment()}
+                placeholder="Комментарий..."
+                className="flex-1 px-2 py-1 text-black rounded text-sm"
+              />
+              <button onClick={addComment} className="px-2 py-1 bg-blue-500 rounded text-sm">Отпр.</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
