@@ -21,3 +21,4 @@ export async function GET(request: Request) {
   const { count } = await supabase.from('likes').select('*', { count: 'exact' }).eq('highlight_id', highlight_id)
   return NextResponse.json({ likes: count || 0 })
 }
+

@@ -55,7 +55,8 @@ export async function POST(request: Request) {
 
       case '/link': {
         const nick = args[1]
-        if (!nick) { await sendMessage(chatId, 'Использование: /link ТВОЙ_НИК'); break }
+        if (!nick) { await sendMessage(chatId, 'Использование: /link ТВОЙ_НИК');
+export const dynamic = 'force-dynamic' break }
         await supabase.from('user_links').upsert(
           { telegram_id: telegramId, faceit_nickname: nick },
           { onConflict: 'telegram_id' }
@@ -144,3 +145,4 @@ async function sendMessage(chatId: number, text: string) {
     body: JSON.stringify({ chat_id: chatId, text })
   })
 }
+

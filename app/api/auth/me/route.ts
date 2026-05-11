@@ -10,7 +10,8 @@ const JWT_SECRET = new TextEncoder().encode(process.env.SUPABASE_SERVICE_ROLE_KE
 
 export async function GET(request: Request) {
   const cookie = request.headers.get('cookie') || ''
-  const tokenMatch = cookie.match(/token=([^;]+)/)
+  const tokenMatch = cookie.match(/token=([^;
+export const dynamic = 'force-dynamic']+)/)
   if (!tokenMatch) return NextResponse.json({ user: null }, { status: 401 })
 
   try {
