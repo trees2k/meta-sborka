@@ -67,6 +67,24 @@ export default function ProfilePage() {
     if (res.ok) setIsFollowing(!isFollowing)
   }
 
+  const [isOwner, setIsOwner] = useState(false)
+
+useEffect(() => {
+  fetch('/api/auth/me')
+    .then(r => r.json())
+    .then(data => {
+      if (data.user?.faceit_nickname === nickname) setIsOwner(true)
+    })
+    .catch(() => {})
+}, [nickname])
+
+// В кнопках (после «Написать»):
+{isOwner && (
+  <Link href="/profile/setup" className="px-4 py-1 bg-gray-700 rounded-full text-sm">
+    Редактировать
+  </Link>
+)}
+
   if (!profile) return <div className="min-h-screen bg-gray-950 text-white p-6">Загрузка...</div>
 
   return (
