@@ -6,28 +6,55 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Загрузка нового хайлайта
 export async function POST(request: Request) {
-  const { nickname, title, video_url, map_name, type, elo_snapshot } = await request.json()
-  const { error } = await supabase.from('highlights').insert({
-    nickname, title, video_url, map_name, type, elo_snapshot
-  })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
-}
+  const formData = await request.formData()
+  const file = formData.get('video') as File
+  const user_nickname = formData.get('user_nickname') as string
+  const title = (formData.get('title') as string) || ''
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const nickname = searchParams.get('nickname')
-  const limit = parseInt(searchParams.get('limit') || '20')
-
-  let query = supabase.from('highlights').select('*').order('created_at', { ascending: false }).limit(limit)
-
-  if (nickname) {
-    query = query.eq('nickname', nickname)
+  if (!file || !user_nickname) {
+    return NextResponse.json({ error: 'Видео и никнейм обязательны' }, { status: 400 })
   }
 
-  const { data, error } = await query
+  // Загружаем файл в Supabase Storage (создай бакет "highlights" в Supabase)
+  const fileName = `${user_nickname}_${Date.now()}.mp4`
+  const { error: uploadError } = await supabase.storage
+    .from('highlights')
+    .upload(fileName, file)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data || [])
+  if (uploadError) {
+    return NextResponse.json({ error: uploadError.message }, { status: 500 })
+  }
+
+  // Получаем публичную ссылку
+  const { data: publicUrl } = supabase.storage
+    .from('highlights')
+    .getPublicUrl(fileName)
+
+  // Сохраняем в таблицу
+  const { error: insertError } = await supabase
+    .from('highlights')
+    .insert({ user_nickname, video_url: publicUrl.publicUrl, title })
+
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true, url: publicUrl.publicUrl })
+}
+
+// Получение всех хайлайтов
+export async function GET() {
+  const { data, error } = await supabase
+    .from('highlights')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ highlights: data })
 }

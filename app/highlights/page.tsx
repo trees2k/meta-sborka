@@ -1,93 +1,115 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-export default function HighlightsFeed() {
+export default function HighlightsPage() {
   const [highlights, setHighlights] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [likesMap, setLikesMap] = useState<Record<number, number>>({})
-  const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
+  // Загрузка списка хайлайтов
   useEffect(() => {
-    fetchHighlights()
+    fetch('/api/highlights')
+      .then(r => r.json())
+      .then(data => {
+        if (data.highlights) setHighlights(data.highlights)
+      })
+      .finally(() => setLoading(false))
   }, [])
 
-  const fetchHighlights = async () => {
-    setLoading(true)
-    const res = await fetch('/api/highlights?limit=50&_=' + Date.now())
-    const data = await res.json()
-    if (Array.isArray(data)) {
-      setHighlights(data)
-      data.forEach((h: any) => {
-        fetch(`/api/likes?highlight_id=${h.id}`)
-          .then(r => r.json())
-          .then(d => setLikesMap(prev => ({ ...prev, [h.id]: d.likes || 0 })))
-          .catch(() => {})
-      })
-    }
-    setLoading(false)
-  }
+  // Загрузка нового хайлайта
+  const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.target as HTMLFormElement
+    const fileInput = form.querySelector('input[type=file]') as HTMLInputElement
+    const file = fileInput.files?.[0]
+    if (!file) return
 
-  const handleLike = async (highlightId: number) => {
-    const nick = localStorage.getItem('currentNickname')
-    if (!nick) { alert('Войди в кабинет, чтобы лайкать'); return }
-    const res = await fetch('/api/likes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ highlight_id: highlightId, nickname: nick })
-    })
-    const data = await res.json()
-    if (data.ok) setLikesMap(prev => ({ ...prev, [highlightId]: data.likes }))
+    const nickname = localStorage.getItem('currentNickname') || 'anonymous'
+    const titleInput = form.querySelector('input[type=text]') as HTMLInputElement
+
+    const formData = new FormData()
+    formData.append('video', file)
+    formData.append('user_nickname', nickname)
+    formData.append('title', titleInput.value)
+
+    setUploading(true)
+    try {
+      const res = await fetch('/api/highlights', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.ok) {
+        // Обновляем список
+        setHighlights(prev => [{
+          video_url: data.url,
+          user_nickname: nickname,
+          title: titleInput.value,
+          created_at: new Date().toISOString()
+        }, ...prev])
+        titleInput.value = ''
+        fileInput.value = ''
+        alert('Хайлайт загружен!')
+      } else {
+        alert('Ошибка: ' + data.error)
+      }
+    } catch {
+      alert('Ошибка загрузки')
+    }
+    setUploading(false)
   }
 
   return (
     <main className="min-h-screen bg-gray-950 text-white p-6">
-      <div className="max-w-6xl mx-auto">
-        <Link href="/" className="text-blue-400 hover:underline text-sm">← На главную</Link>
-        <h1 className="text-4xl font-bold mt-4 mb-6">🎬 Лента хайлайтов</h1>
+      <div className="max-w-5xl mx-auto">
+        <Link href="/" className="text-blue-500 hover:underline">← На главную</Link>
+        <h1 className="text-3xl font-bold mt-4 mb-6">Лента хайлайтов</h1>
 
+        {/* Форма загрузки */}
+        <div className="bg-gray-800/50 rounded-2xl p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4">Загрузить свой хайлайт</h2>
+          <form onSubmit={handleUpload} className="space-y-4">
+            <input
+              type="text"
+              placeholder="Название момента (необязательно)"
+              className="w-full px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white"
+            />
+            <input
+              type="file"
+              accept="video/*"
+              required
+              className="block text-sm"
+            />
+            <button
+              type="submit"
+              disabled={uploading}
+              className="px-6 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 rounded-xl font-semibold"
+            >
+              {uploading ? 'Загрузка...' : 'Загрузить'}
+            </button>
+          </form>
+        </div>
+
+        {/* Сетка хайлайтов */}
         {loading ? (
-          <p className="text-center py-20">Загрузка...</p>
+          <p>Загрузка...</p>
         ) : highlights.length === 0 ? (
-          <p className="text-center py-20 text-gray-500">Пока нет хайлайтов. Будь первым — добавь момент в своём кабинете!</p>
+          <p className="text-gray-400">Пока никто не загрузил хайлайты. Будь первым!</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {highlights.map((h: any) => (
-              <div key={h.id} className="bg-gray-800/50 rounded-2xl overflow-hidden hover:bg-gray-800 transition-all">
-                <div
-                  className="aspect-video bg-gray-900 flex items-center justify-center cursor-pointer relative"
-                  onClick={() => setSelectedVideo(h.video_url)}
-                >
-                  <span className="text-4xl">▶️</span>
-                </div>
+              <div key={h.id} className="bg-gray-800/50 rounded-2xl overflow-hidden">
+                <video
+                  src={h.video_url}
+                  controls
+                  className="w-full aspect-video object-cover"
+                />
                 <div className="p-4">
-                  <p className="font-semibold truncate">{h.title}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Link href={`/profile/${h.nickname}`} className="text-blue-400 text-sm hover:underline">{h.nickname}</Link>
-                    <span className="text-gray-500 text-xs">{h.elo_snapshot} ELO</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                    <span>{h.map_name}</span>
-                    <span>{new Date(h.created_at).toLocaleDateString()}</span>
-                    <button onClick={() => handleLike(h.id)} className="text-red-400 hover:text-red-300">❤️ {likesMap[h.id] || 0}</button>
-                  </div>
+                  <p className="font-semibold">{h.title || 'Без названия'}</p>
+                  <p className="text-sm text-gray-400">{h.user_nickname}</p>
+                  <p className="text-xs text-gray-500">{new Date(h.created_at).toLocaleDateString('ru-RU')}</p>
                 </div>
               </div>
             ))}
-          </div>
-        )}
-
-        {selectedVideo && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6" onClick={() => setSelectedVideo(null)}>
-            <div className="relative w-full max-w-4xl aspect-video" onClick={e => e.stopPropagation()}>
-              <button onClick={() => setSelectedVideo(null)} className="absolute -top-10 right-0 text-white text-2xl hover:text-gray-300">✕</button>
-              <iframe
-                src={selectedVideo.replace('watch?v=', 'embed/')}
-                className="w-full h-full rounded-xl"
-                allowFullScreen
-              />
-            </div>
           </div>
         )}
       </div>
