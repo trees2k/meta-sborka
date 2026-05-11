@@ -26,3 +26,40 @@ export async function DELETE(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const follower = searchParams.get('follower')
+  const followee = searchParams.get('followee')
+
+  // Статус подписки (подписан ли follower на followee)
+  if (follower && followee) {
+    const { data } = await supabase
+      .from('follows')
+      .select('*')
+      .eq('follower_nickname', follower)
+      .eq('followee_nickname', followee)
+      .limit(1)
+    return NextResponse.json({ following: data && data.length > 0 })
+  }
+
+  // Количество подписчиков (кто подписан на followee)
+  if (followee && !follower) {
+    const { count } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('followee_nickname', followee)
+    return NextResponse.json({ count: count || 0 })
+  }
+
+  // Количество подписок (на кого подписан follower)
+  if (follower && !followee) {
+    const { count } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_nickname', follower)
+    return NextResponse.json({ count: count || 0 })
+  }
+
+  return NextResponse.json({ error: 'Укажите follower и/или followee' }, { status: 400 })
+}
