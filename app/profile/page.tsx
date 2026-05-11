@@ -2,24 +2,37 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 
 export default function ProfilePage() {
   const { nickname } = useParams<{ nickname: string }>()
   const [profile, setProfile] = useState<any>(null)
+  const [bio, setBio] = useState('')
   const [highlights, setHighlights] = useState<any[]>([])
   const [isFollowing, setIsFollowing] = useState(false)
   const [followerCount, setFollowerCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
 
   useEffect(() => {
+    // Загружаем профиль из Faceit
     fetch(`/api/faceit?nickname=${nickname}`)
       .then(r => r.json())
       .then(data => setProfile(data))
 
+    // Загружаем описание из нашей базы
+    fetch(`/api/profile/${nickname}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.bio) setBio(data.bio)
+      })
+      .catch(() => {})
+
+    // Загружаем хайлайты пользователя
     fetch(`/api/highlights?nickname=${nickname}`)
       .then(r => r.json())
       .then(data => setHighlights(data.highlights || []))
 
+    // Статус подписки
     const currentUser = localStorage.getItem('currentNickname')
     if (currentUser) {
       fetch(`/api/social/follow?follower=${currentUser}&followee=${nickname}`)
@@ -27,6 +40,7 @@ export default function ProfilePage() {
         .then(data => setIsFollowing(data.following))
     }
 
+    // Количество подписчиков и подписок
     fetch(`/api/social/follow?followee=${nickname}`)
       .then(r => r.json())
       .then(data => setFollowerCount(data.count || 0))
@@ -51,21 +65,52 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-gray-950 text-white p-6">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center gap-6 mb-8">
+        {/* Профиль */}
+        <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
           <img src={profile.avatar} className="w-24 h-24 rounded-full" />
-          <div>
+          <div className="text-center md:text-left">
             <h1 className="text-3xl font-bold">{profile.nickname}</h1>
             <p className="text-gray-400">ELO {profile.elo}</p>
-            <div className="flex gap-4 mt-2 text-sm">
+            {bio && <p className="text-sm text-gray-300 mt-1">{bio}</p>}
+            <div className="flex gap-4 mt-2 text-sm justify-center md:justify-start">
               <span><strong>{followerCount}</strong> подписчиков</span>
               <span><strong>{followingCount}</strong> подписок</span>
             </div>
-            <button onClick={handleFollow} className="mt-2 px-4 py-1 bg-blue-500 rounded-full text-sm">
-              {isFollowing ? 'Отписаться' : 'Подписаться'}
-            </button>
+            <div className="flex gap-2 mt-2">
+              <button onClick={handleFollow} className="px-4 py-1 bg-blue-500 rounded-full text-sm">
+                {isFollowing ? 'Отписаться' : 'Подписаться'}
+              </button>
+              <Link href={`/messages/${nickname}`} className="px-4 py-1 bg-gray-700 rounded-full text-sm">
+                Написать
+              </Link>
+            </div>
           </div>
         </div>
 
+        {/* Важная статистика */}
+        <div className="bg-gray-800/50 rounded-2xl p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4">Статистика</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <p className="text-gray-400 text-sm">Винрейт</p>
+              <p className="text-lg font-bold">{profile.stats?.lifetime?.['Win Rate %'] || '—'}%</p>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm">K/D</p>
+              <p className="text-lg font-bold">{profile.stats?.lifetime?.['Average K/D Ratio'] || '—'}</p>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm">Матчей</p>
+              <p className="text-lg font-bold">{profile.stats?.lifetime?.['Matches'] || '—'}</p>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm">ADR</p>
+              <p className="text-lg font-bold">{profile.stats?.lifetime?.['ADR'] || '—'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Лента хайлайтов */}
         <h2 className="text-xl font-semibold mb-4">Хайлайты</h2>
         {highlights.length === 0 ? (
           <p className="text-gray-400">Пока нет хайлайтов</p>
