@@ -13,26 +13,21 @@ export default function ProfilePage() {
   const [followingCount, setFollowingCount] = useState(0)
 
   useEffect(() => {
-    // Загружаем профиль
     fetch(`/api/faceit?nickname=${nickname}`)
       .then(r => r.json())
       .then(data => setProfile(data))
 
-    // Загружаем хайлайты пользователя
     fetch(`/api/highlights?nickname=${nickname}`)
       .then(r => r.json())
       .then(data => setHighlights(data.highlights || []))
 
-    // Статус подписки
     const currentUser = localStorage.getItem('currentNickname')
     if (currentUser) {
-      // Проверяем, подписан ли текущий пользователь на этот профиль
       fetch(`/api/social/follow?follower=${currentUser}&followee=${nickname}`)
         .then(r => r.json())
         .then(data => setIsFollowing(data.following))
     }
 
-    // Количество подписчиков и подписок
     fetch(`/api/social/follow?followee=${nickname}`)
       .then(r => r.json())
       .then(data => setFollowerCount(data.count || 0))
@@ -56,7 +51,6 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-gray-950 text-white p-6">
       <div className="max-w-3xl mx-auto">
-        {/* Профиль */}
         <div className="flex items-center gap-6 mb-8">
           <img src={profile.avatar} className="w-24 h-24 rounded-full" />
           <div>
@@ -72,7 +66,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Лента хайлайтов */}
         <h2 className="text-xl font-semibold mb-4">Хайлайты</h2>
         {highlights.length === 0 ? (
           <p className="text-gray-400">Пока нет хайлайтов</p>
@@ -88,7 +81,6 @@ export default function ProfilePage() {
   )
 }
 
-// Компонент карточки хайлайта с лайками и комментариями
 function HighlightCard({ highlight }: { highlight: any }) {
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
@@ -97,14 +89,12 @@ function HighlightCard({ highlight }: { highlight: any }) {
   const [commentText, setCommentText] = useState('')
 
   useEffect(() => {
-    // Загружаем количество лайков и статус
     fetch(`/api/social/like?highlight_id=${highlight.id}`)
       .then(r => r.json())
       .then(data => {
         setLikeCount(data.count || 0)
         setLiked(data.liked || false)
       })
-    // Загружаем комментарии
     fetch(`/api/social/comment?highlight_id=${highlight.id}`)
       .then(r => r.json())
       .then(data => setComments(data.comments || []))
@@ -134,7 +124,6 @@ function HighlightCard({ highlight }: { highlight: any }) {
     if (res.ok) {
       setCommentText('')
       setShowComments(false)
-      // Обновляем комментарии
       const updated = await fetch(`/api/social/comment?highlight_id=${highlight.id}`)
       const data = await updated.json()
       setComments(data.comments || [])
