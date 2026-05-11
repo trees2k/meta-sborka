@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 
+// Замени на текущий Cloudflare URL
 const VPS_URL = 'https://advised-frozen-instruction-roster.trycloudflare.com/analyze'
+const HIGHLIGHTS_URL = 'https://advised-frozen-instruction-roster.trycloudflare.com/highlights'
+
 export async function POST(request: Request) {
   const formData = await request.formData()
   const file = formData.get('demo') as File
@@ -21,7 +24,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: vpsData.detail || 'Ошибка анализа' }, { status: 500 })
     }
 
-    return NextResponse.json({ ok: true, data: vpsData.data })
+    // После успешного анализа генерируем хайлайты
+    const highlightRes = await fetch(HIGHLIGHTS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname, demo_url: vpsData.demo_url })
+    })
+    const highlightData = await highlightRes.json()
+
+    return NextResponse.json({
+      ok: true,
+      stats: vpsData.data,
+      highlights: highlightData.highlights || []
+    })
   } catch (err: any) {
     return NextResponse.json({ error: 'Ошибка при анализе: ' + err.message }, { status: 500 })
   }
