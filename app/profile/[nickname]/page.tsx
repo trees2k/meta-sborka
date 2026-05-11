@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followerCount, setFollowerCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
+  const [isOwner, setIsOwner] = useState(false)
 
   useEffect(() => {
     // Загружаем профиль из Faceit
@@ -22,7 +23,7 @@ export default function ProfilePage() {
       .then(data => setProfile(data))
       .catch(() => setProfile(null))
 
-    // Загружаем описание
+    // Загружаем описание из таблицы users (поле bio)
     fetch(`/api/profile/${nickname}`)
       .then(r => r.json())
       .then(data => {
@@ -36,7 +37,7 @@ export default function ProfilePage() {
       .then(data => setHighlights(data.highlights || []))
       .catch(() => setHighlights([]))
 
-    // Подписки
+    // Статус подписки (текущий пользователь из localStorage)
     const currentUser = localStorage.getItem('currentNickname')
     if (currentUser) {
       fetch(`/api/social/follow?follower=${currentUser}&followee=${nickname}`)
@@ -45,6 +46,7 @@ export default function ProfilePage() {
         .catch(() => {})
     }
 
+    // Количество подписчиков и подписок
     fetch(`/api/social/follow?followee=${nickname}`)
       .then(r => r.json())
       .then(data => setFollowerCount(data.count || 0))
@@ -53,6 +55,14 @@ export default function ProfilePage() {
     fetch(`/api/social/follow?follower=${nickname}`)
       .then(r => r.json())
       .then(data => setFollowingCount(data.count || 0))
+      .catch(() => {})
+
+    // Проверяем, является ли текущий пользователь владельцем профиля
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => {
+        if (data.user?.faceit_nickname === nickname) setIsOwner(true)
+      })
       .catch(() => {})
   }, [nickname])
 
@@ -66,24 +76,6 @@ export default function ProfilePage() {
     })
     if (res.ok) setIsFollowing(!isFollowing)
   }
-
-  const [isOwner, setIsOwner] = useState(false)
-
-useEffect(() => {
-  fetch('/api/auth/me')
-    .then(r => r.json())
-    .then(data => {
-      if (data.user?.faceit_nickname === nickname) setIsOwner(true)
-    })
-    .catch(() => {})
-}, [nickname])
-
-// В кнопках (после «Написать»):
-{isOwner && (
-  <Link href="/profile/setup" className="px-4 py-1 bg-gray-700 rounded-full text-sm">
-    Редактировать
-  </Link>
-)}
 
   if (!profile) return <div className="min-h-screen bg-gray-950 text-white p-6">Загрузка...</div>
 
@@ -108,6 +100,11 @@ useEffect(() => {
               <Link href={`/messages/${nickname}`} className="px-4 py-1 bg-gray-700 rounded-full text-sm">
                 Написать
               </Link>
+              {isOwner && (
+                <Link href="/profile/setup" className="px-4 py-1 bg-gray-700 rounded-full text-sm">
+                  Редактировать
+                </Link>
+              )}
             </div>
           </div>
         </div>
