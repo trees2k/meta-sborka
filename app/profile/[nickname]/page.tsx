@@ -37,16 +37,28 @@ export default function ProfilePage() {
       .then(data => setHighlights(data.highlights || []))
       .catch(() => setHighlights([]))
 
-    // Статус подписки (текущий пользователь из localStorage)
-    const currentUser = localStorage.getItem('currentNickname')
-    if (currentUser) {
-      fetch(`/api/social/follow?follower=${currentUser}&followee=${nickname}`)
-        .then(r => r.json())
-        .then(data => setIsFollowing(data.following))
-        .catch(() => {})
-    }
+    // Проверяем, является ли текущий пользователь владельцем
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => {
+        if (data.user?.faceit_nickname === nickname) {
+          setIsOwner(true)
+          // Автоматически подписываться на самого себя не нужно, скроем кнопку
+        } else {
+          setIsOwner(false)
+          // Статус подписки для чужого профиля
+          const currentUser = localStorage.getItem('currentNickname')
+          if (currentUser) {
+            fetch(`/api/social/follow?follower=${currentUser}&followee=${nickname}`)
+              .then(r => r.json())
+              .then(data => setIsFollowing(data.following))
+              .catch(() => {})
+          }
+        }
+      })
+      .catch(() => {})
 
-    // Количество подписчиков и подписок
+    // Количество подписчиков и подписок (для всех профилей)
     fetch(`/api/social/follow?followee=${nickname}`)
       .then(r => r.json())
       .then(data => setFollowerCount(data.count || 0))
@@ -56,17 +68,11 @@ export default function ProfilePage() {
       .then(r => r.json())
       .then(data => setFollowingCount(data.count || 0))
       .catch(() => {})
-
-    // Проверяем, является ли текущий пользователь владельцем профиля
-    fetch('/api/auth/me')
-      .then(r => r.json())
-      .then(data => {
-        if (data.user?.faceit_nickname === nickname) setIsOwner(true)
-      })
-      .catch(() => {})
   }, [nickname])
 
   const handleFollow = async () => {
+    // Только для чужого профиля
+    if (isOwner) return
     const currentUser = localStorage.getItem('currentNickname')
     if (!currentUser) return alert('Войдите под своим ником')
     const res = await fetch('/api/social/follow', {
@@ -94,15 +100,18 @@ export default function ProfilePage() {
               <span><strong>{followingCount}</strong> подписок</span>
             </div>
             <div className="flex gap-2 mt-2">
-              <button onClick={handleFollow} className="px-4 py-1 bg-blue-500 rounded-full text-sm">
-                {isFollowing ? 'Отписаться' : 'Подписаться'}
-              </button>
-              <Link href={`/messages/${nickname}`} className="px-4 py-1 bg-gray-700 rounded-full text-sm">
-                Написать
-              </Link>
-              {isOwner && (
-                <Link href="/profile/setup" className="px-4 py-1 bg-gray-700 rounded-full text-sm">
+              {isOwner ? (
+                <Link href="/profile/setup" className="px-4 py-1 bg-blue-500 rounded-full text-sm">
                   Редактировать
+                </Link>
+              ) : (
+                <button onClick={handleFollow} className="px-4 py-1 bg-blue-500 rounded-full text-sm">
+                  {isFollowing ? 'Отписаться' : 'Подписаться'}
+                </button>
+              )}
+              {!isOwner && (
+                <Link href={`/messages/${nickname}`} className="px-4 py-1 bg-gray-700 rounded-full text-sm">
+                  Написать
                 </Link>
               )}
             </div>
@@ -139,7 +148,7 @@ export default function ProfilePage() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {highlights.map((h: any) => (
-              <HighlightCard key={h.id} highlight={h} />
+              <HighlightCard key={h.id} highlight={h} isOwner={isOwner} />
             ))}
           </div>
         )}
@@ -148,7 +157,7 @@ export default function ProfilePage() {
   )
 }
 
-function HighlightCard({ highlight }: { highlight: any }) {
+function HighlightCard({ highlight, isOwner }: { highlight: any; isOwner: boolean }) {
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
   const [comments, setComments] = useState<any[]>([])

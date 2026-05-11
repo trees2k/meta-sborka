@@ -1,27 +1,58 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { jwtVerify } from 'jose'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+const JWT_SECRET = new TextEncoder().encode(process.env.SUPABASE_SERVICE_ROLE_KEY || 'fallback-secret')
+
+async function getUserIdFromCookie(request: Request) {
+  const cookie = request.headers.get('cookie') || ''
+  const tokenMatch = cookie.match(/token=([^;]+)/)
+  if (!tokenMatch) return null
+  try {
+    const { payload } = await jwtVerify(tokenMatch[1], JWT_SECRET)
+    return payload.userId as string
+  } catch {
+    return null
+  }
+}
 
 export async function POST(request: Request) {
-  const { follower, followee } = await request.json()
-  if (!follower || !followee) {
-    return NextResponse.json({ error: 'follower и followee обязательны' }, { status: 400 })
-  }
-  const { error } = await supabase.from('follows').upsert({ follower_nickname: follower, followee_nickname: followee })
+  const userId = await getUserIdFromCookie(request)
+  if (!userId) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+
+  const { followee } = await request.json()
+  if (!followee) return NextResponse.json({ error: 'followee обязателен' }, { status: 400 })
+
+  // Получаем никнейм текущего пользователя
+  const { data: userData } = await supabase.from('users').select('faceit_nickname').eq('id', userId).single()
+  if (!userData?.faceit_nickname) return NextResponse.json({ error: 'Привяжите Faceit' }, { status: 400 })
+
+  const { error } = await supabase.from('follows').upsert({
+    follower_nickname: userData.faceit_nickname,
+    followee_nickname: followee
+  })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
 
 export async function DELETE(request: Request) {
-  const { follower, followee } = await request.json()
+  const userId = await getUserIdFromCookie(request)
+  if (!userId) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
+
+  const { followee } = await request.json()
+  if (!followee) return NextResponse.json({ error: 'followee обязателен' }, { status: 400 })
+
+  const { data: userData } = await supabase.from('users').select('faceit_nickname').eq('id', userId).single()
+  if (!userData?.faceit_nickname) return NextResponse.json({ error: 'Привяжите Faceit' }, { status: 400 })
+
   const { error } = await supabase
     .from('follows')
     .delete()
-    .eq('follower_nickname', follower)
+    .eq('follower_nickname', userData.faceit_nickname)
     .eq('followee_nickname', followee)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
@@ -29,10 +60,10 @@ export async function DELETE(request: Request) {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const follower = searchParams.get('follower')
   const followee = searchParams.get('followee')
+  const follower = searchParams.get('follower')
 
-  // Статус подписки (подписан ли follower на followee)
+  // Статус подписки
   if (follower && followee) {
     const { data } = await supabase
       .from('follows')
@@ -43,7 +74,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ following: data && data.length > 0 })
   }
 
-  // Количество подписчиков (кто подписан на followee)
+  // Количество подписчиков
   if (followee && !follower) {
     const { count } = await supabase
       .from('follows')
@@ -52,7 +83,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ count: count || 0 })
   }
 
-  // Количество подписок (на кого подписан follower)
+  // Количество подписок
   if (follower && !followee) {
     const { count } = await supabase
       .from('follows')

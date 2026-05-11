@@ -12,7 +12,6 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
 
-    // 1. Логинимся
     const loginRes = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -24,7 +23,7 @@ export default function LoginPage() {
       return
     }
 
-    // 2. Проверяем, привязан ли Faceit
+    // Получаем текущего пользователя
     const meRes = await fetch('/api/auth/me')
     const meData = await meRes.json()
     if (meData.user?.faceit_nickname) {

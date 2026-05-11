@@ -9,7 +9,6 @@ const supabase = createClient(
 const JWT_SECRET = new TextEncoder().encode(process.env.SUPABASE_SERVICE_ROLE_KEY || 'fallback-secret')
 
 export async function POST(request: Request) {
-  // Получаем пользователя из cookie
   const cookie = request.headers.get('cookie') || ''
   const tokenMatch = cookie.match(/token=([^;]+)/)
   if (!tokenMatch) return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
