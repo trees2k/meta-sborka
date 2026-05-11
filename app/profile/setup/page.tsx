@@ -23,12 +23,14 @@ export default function SetupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    // Проверяем, что ник существует на Faceit
     const checkRes = await fetch(`/api/faceit?nickname=${encodeURIComponent(nickname)}`)
     const checkData = await checkRes.json()
     if (checkData.error) {
       setError('Игрок не найден на Faceit')
       return
     }
+    // Сохраняем новый ник
     const res = await fetch('/api/profile/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
