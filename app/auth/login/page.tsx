@@ -11,14 +11,27 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    const res = await fetch('/api/auth/login', {
+
+    // 1. Логинимся
+    const loginRes = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     })
-    const data = await res.json()
-    if (data.error) setError(data.error)
-    else window.location.href = '/profile/setup'  // ← исправленный редирект
+    const loginData = await loginRes.json()
+    if (loginData.error) {
+      setError(loginData.error)
+      return
+    }
+
+    // 2. Проверяем, привязан ли Faceit
+    const meRes = await fetch('/api/auth/me')
+    const meData = await meRes.json()
+    if (meData.user?.faceit_nickname) {
+      window.location.href = `/profile/${meData.user.faceit_nickname}`
+    } else {
+      window.location.href = '/profile/setup'
+    }
   }
 
   return (
