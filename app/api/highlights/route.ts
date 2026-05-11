@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Видео и никнейм обязательны' }, { status: 400 })
   }
 
-  // Загружаем файл в Supabase Storage (создай бакет "highlights" в Supabase)
+  // Загружаем файл в Supabase Storage
   const fileName = `${user_nickname}_${Date.now()}.mp4`
   const { error: uploadError } = await supabase.storage
     .from('highlights')
@@ -44,17 +44,26 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true, url: publicUrl.publicUrl })
 }
 
-// Получение всех хайлайтов
-export async function GET() {
-  const { data, error } = await supabase
+// Получение хайлайтов (с фильтрацией по никнейму)
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const nickname = searchParams.get('nickname')
+
+  let query = supabase
     .from('highlights')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(20)
 
+  if (nickname) {
+    query = query.eq('user_nickname', nickname)
+  }
+
+  const { data, error } = await query
+
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ highlights: data })
+  return NextResponse.json({ highlights: data || [] })
 }
