@@ -10,12 +10,21 @@ export default function Landing() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [loggedIn, setLoggedIn] = useState(false)
+  const [user, setUser] = useState<any>(null)
 
-  // Проверяем, авторизован ли пользователь
+  // Проверяем, авторизован ли пользователь, и получаем его профиль
   useEffect(() => {
     fetch('/api/auth/me')
       .then(r => r.json())
-      .then(data => setLoggedIn(!!data.user))
+      .then(data => {
+        if (data.user) {
+          setLoggedIn(true)
+          setUser(data.user)
+          if (data.user.faceit_nickname) {
+            localStorage.setItem('currentNickname', data.user.faceit_nickname)
+          }
+        }
+      })
       .catch(() => setLoggedIn(false))
   }, [])
 
@@ -37,12 +46,12 @@ export default function Landing() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
-      {/* Шапка с кнопками входа/регистрации */}
+      {/* Шапка с кнопками входа/регистрации или профилем */}
       <header className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold">Ufuture</Link>
         <div className="flex items-center gap-4">
           {loggedIn ? (
-            <Link href="/profile" className="flex items-center gap-1 text-sm text-gray-300 hover:text-white">
+            <Link href={user?.faceit_nickname ? `/profile/${user.faceit_nickname}` : '/profile/setup'} className="flex items-center gap-1 text-sm text-gray-300 hover:text-white">
               <User size={18} /> Профиль
             </Link>
           ) : (

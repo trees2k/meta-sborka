@@ -18,7 +18,7 @@ export default function LoginPage() {
     })
     const data = await res.json()
     if (data.error) setError(data.error)
-    else window.location.href = '/profile'
+    else window.location.href = '/profile/setup'  // ← исправленный редирект
   }
 
   return (
