@@ -1,14 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Zap, TrendingUp, Clock, Target, Shield, Frown, Users, Play } from 'lucide-react'
+import { ArrowRight, Zap, TrendingUp, Clock, Target, Shield, Frown, Users, Play, User } from 'lucide-react'
 
 export default function Landing() {
   const [nickname, setNickname] = useState('')
   const [player, setPlayer] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [loggedIn, setLoggedIn] = useState(false)
+
+  // Проверяем, авторизован ли пользователь
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => setLoggedIn(!!data.user))
+      .catch(() => setLoggedIn(false))
+  }, [])
 
   const handleScan = async () => {
     if (!nickname.trim()) return
@@ -28,6 +37,23 @@ export default function Landing() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white">
+      {/* Шапка с кнопками входа/регистрации */}
+      <header className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="text-xl font-bold">Ufuture</Link>
+        <div className="flex items-center gap-4">
+          {loggedIn ? (
+            <Link href="/profile" className="flex items-center gap-1 text-sm text-gray-300 hover:text-white">
+              <User size={18} /> Профиль
+            </Link>
+          ) : (
+            <>
+              <Link href="/auth/login" className="text-sm text-gray-300 hover:text-white">Войти</Link>
+              <Link href="/auth/signup" className="px-4 py-1 bg-blue-500 hover:bg-blue-600 rounded-full text-sm">Регистрация</Link>
+            </>
+          )}
+        </div>
+      </header>
+
       <section className="max-w-3xl mx-auto px-6 pt-24 pb-12 text-center">
         <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-full px-4 py-1.5 text-sm text-blue-400 mb-6">
           <Zap size={14} /> Бесплатный AI-чекап
@@ -121,7 +147,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Новая карточка — Лента хайлайтов */}
       <section className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-8">
         <Link href="/highlights" className="bg-gray-800/50 rounded-2xl p-8 text-center hover:bg-gray-800 transition-all">
           <Play className="text-blue-400 mx-auto mb-4" size={24} />
