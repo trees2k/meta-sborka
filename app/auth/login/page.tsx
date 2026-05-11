@@ -24,23 +24,12 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-gray-950 text-white p-6">
       <div className="max-w-md mx-auto">
-        <Link href="/" className="text-blue-400 hover:underline">← На главную</Link>
-        <h1 className="text-3xl font-bold mt-4 mb-6">Вход</h1>
+        <h1 className="text-3xl font-bold mb-6">Вход</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-              className="w-full px-4 py-2 rounded-xl bg-gray-800 border border-gray-700" />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Пароль</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-              className="w-full px-4 py-2 rounded-xl bg-gray-800 border border-gray-700" />
-          </div>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" required className="w-full px-4 py-2 rounded-xl bg-gray-800 border border-gray-700" />
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Пароль" required className="w-full px-4 py-2 rounded-xl bg-gray-800 border border-gray-700" />
           {error && <p className="text-red-400 text-sm">{error}</p>}
-          <button type="submit" className="w-full py-3 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold">
-            Войти
-          </button>
+          <button type="submit" className="w-full py-3 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold">Войти</button>
         </form>
         <p className="text-gray-400 text-sm mt-4 text-center">
           Нет аккаунта? <Link href="/auth/signup" className="text-blue-400 hover:underline">Зарегистрироваться</Link>

@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
@@ -18,12 +20,13 @@ export default function ProfilePage() {
     fetch(`/api/faceit?nickname=${nickname}`)
       .then(r => r.json())
       .then(data => setProfile(data))
+      .catch(() => setProfile(null))
 
-    // Загружаем описание из нашей базы
+    // Загружаем описание
     fetch(`/api/profile/${nickname}`)
       .then(r => r.json())
       .then(data => {
-        if (data.bio) setBio(data.bio)
+        if (data && data.bio) setBio(data.bio)
       })
       .catch(() => {})
 
@@ -31,22 +34,26 @@ export default function ProfilePage() {
     fetch(`/api/highlights?nickname=${nickname}`)
       .then(r => r.json())
       .then(data => setHighlights(data.highlights || []))
+      .catch(() => setHighlights([]))
 
-    // Статус подписки
+    // Подписки
     const currentUser = localStorage.getItem('currentNickname')
     if (currentUser) {
       fetch(`/api/social/follow?follower=${currentUser}&followee=${nickname}`)
         .then(r => r.json())
         .then(data => setIsFollowing(data.following))
+        .catch(() => {})
     }
 
-    // Количество подписчиков и подписок
     fetch(`/api/social/follow?followee=${nickname}`)
       .then(r => r.json())
       .then(data => setFollowerCount(data.count || 0))
+      .catch(() => {})
+
     fetch(`/api/social/follow?follower=${nickname}`)
       .then(r => r.json())
       .then(data => setFollowingCount(data.count || 0))
+      .catch(() => {})
   }, [nickname])
 
   const handleFollow = async () => {
@@ -87,7 +94,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Важная статистика */}
+        {/* Статистика */}
         <div className="bg-gray-800/50 rounded-2xl p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">Статистика</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -135,6 +142,7 @@ function HighlightCard({ highlight }: { highlight: any }) {
 
   useEffect(() => {
     const user = localStorage.getItem('currentNickname') || 'anonymous'
+
     fetch(`/api/social/like?highlight_id=${highlight.id}&user_nickname=${encodeURIComponent(user)}`)
       .then(r => r.json())
       .then(data => {
@@ -192,9 +200,13 @@ function HighlightCard({ highlight }: { highlight: any }) {
         </div>
         {showComments && (
           <div className="mt-2 bg-gray-900 p-2 rounded max-h-40 overflow-y-auto">
-            {comments.map((c: any) => (
-              <p key={c.id} className="text-xs"><strong>{c.user_nickname}:</strong> {c.text}</p>
-            ))}
+            {comments.length === 0 ? (
+              <p className="text-xs text-gray-500">Нет комментариев</p>
+            ) : (
+              comments.map((c: any) => (
+                <p key={c.id} className="text-xs"><strong>{c.user_nickname}:</strong> {c.text}</p>
+              ))
+            )}
             <div className="flex gap-2 mt-2">
               <input
                 value={commentText}

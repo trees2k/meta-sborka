@@ -9,32 +9,16 @@ const supabase = createClient(
 
 export async function POST(request: Request) {
   const { email, password } = await request.json()
+  if (!email || !password) return NextResponse.json({ error: 'Email и пароль обязательны' }, { status: 400 })
+  if (password.length < 6) return NextResponse.json({ error: 'Пароль не менее 6 символов' }, { status: 400 })
 
-  if (!email || !password) {
-    return NextResponse.json({ error: 'Email и пароль обязательны' }, { status: 400 })
-  }
-
-  if (password.length < 6) {
-    return NextResponse.json({ error: 'Пароль должен быть не менее 6 символов' }, { status: 400 })
-  }
-
-  const { data: existing } = await supabase
-    .from('users')
-    .select('id')
-    .eq('email', email)
-    .limit(1)
-
-  if (existing && existing.length > 0) {
-    return NextResponse.json({ error: 'Пользователь с таким email уже существует' }, { status: 409 })
-  }
+  // Проверяем, нет ли уже такого пользователя
+  const { data: existing } = await supabase.from('users').select('id').eq('email', email).limit(1)
+  if (existing && existing.length > 0) return NextResponse.json({ error: 'Пользователь уже существует' }, { status: 409 })
 
   const password_hash = await bcrypt.hash(password, 10)
-
   const { error } = await supabase.from('users').insert({ email, password_hash })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ ok: true, message: 'Регистрация успешна' })
+  return NextResponse.json({ ok: true })
 }
