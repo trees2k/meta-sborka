@@ -51,7 +51,7 @@ export async function GET(request: Request) {
       .eq('highlight_id', highlight_id)
       .eq('user_nickname', user_nickname)
       .limit(1)
-    liked = data && data.length > 0
+    liked = data ? data.length > 0 : false
   }
 
   return NextResponse.json({ count: count || 0, liked })
