@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // Замени на текущий Cloudflare URL
 const VPS_URL = 'https://advised-frozen-instruction-roster.trycloudflare.com/analyze'
 const HIGHLIGHTS_URL = 'https://advised-frozen-instruction-roster.trycloudflare.com/highlights'
