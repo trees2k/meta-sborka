@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const VPS_URL = 'https://wings-keyboards-cheaper-ahead.trycloudflare.com/analyze'
-const HIGHLIGHTS_URL = 'https://wings-keyboards-cheaper-ahead.trycloudflare.com/highlights'
+// ← замени на актуальный Cloudflare URL
+const VPS_URL = 'https://https://ubuntu.com/engage/secure-kubernetes-at-the-edge.trycloudflare.com/analyze'
+const HIGHLIGHTS_URL = 'https://https://ubuntu.com/engage/secure-kubernetes-at-the-edge.trycloudflare.com/highlights'
 
 export async function POST(request: Request) {
   const formData = await request.formData()
