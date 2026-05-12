@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-// Замени на текущий Cloudflare URL
-const VPS_URL = 'https://advised-frozen-instruction-roster.trycloudflare.com/analyze'
-const HIGHLIGHTS_URL = 'https://advised-frozen-instruction-roster.trycloudflare.com/highlights'
+const VPS_URL = 'https://wings-keyboards-cheaper-ahead.trycloudflare.com/analyze'
+const HIGHLIGHTS_URL = 'https://wings-keyboards-cheaper-ahead.trycloudflare.com/highlights'
 
 export async function POST(request: Request) {
   const formData = await request.formData()
@@ -19,6 +18,7 @@ export async function POST(request: Request) {
     const vpsFormData = new FormData()
     vpsFormData.append('file', file)
 
+    // 1. Анализируем демку на VPS
     const vpsRes = await fetch(VPS_URL, { method: 'POST', body: vpsFormData })
     const vpsData = await vpsRes.json()
 
@@ -26,11 +26,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: vpsData.detail || 'Ошибка анализа' }, { status: 500 })
     }
 
-    // После успешного анализа генерируем хайлайты
+    // 2. Генерируем хайлайты
     const highlightRes = await fetch(HIGHLIGHTS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname, demo_url: vpsData.demo_url })
+      body: JSON.stringify({ nickname, demo_url: vpsData.demo_url || '' })
     })
     const highlightData = await highlightRes.json()
 
@@ -43,4 +43,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ошибка при анализе: ' + err.message }, { status: 500 })
   }
 }
-
