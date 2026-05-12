@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const VPS_URL = 'https://commons-some-times-favour-exercises.trycloudflare.com/analyze'
-const HIGHLIGHTS_URL = 'https://commons-some-times-favour-exercises.trycloudflare.com/highlights'
+// ← подставь свой порт
+const VPS_URL = 'http://bore.pub:XXXXX/analyze'
+const HIGHLIGHTS_URL = 'http://bore.pub:XXXXX/highlights'
 
 export async function POST(request: Request) {
   const formData = await request.formData()
