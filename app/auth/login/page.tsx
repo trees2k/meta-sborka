@@ -23,7 +23,6 @@ export default function LoginPage() {
       return
     }
 
-    // Получаем текущего пользователя
     const meRes = await fetch('/api/auth/me')
     const meData = await meRes.json()
     if (meData.user?.faceit_nickname) {
