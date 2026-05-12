@@ -22,8 +22,8 @@ function CabinetContent() {
   const [analyses, setAnalyses] = useState<any[]>([])
   const [parseResult, setParseResult] = useState<any>(null)
   const [parsing, setParsing] = useState(false)
+  const [highlights, setHighlights] = useState<string[]>([])
 
-  // Загрузка никнейма из URL или localStorage
   useEffect(() => {
     const paramNick = searchParams.get('nickname')
     if (paramNick) {
@@ -35,14 +35,12 @@ function CabinetContent() {
     }
   }, [searchParams])
 
-  // Загрузка сохранённой цели
   useEffect(() => {
     if (!nickname) return
     const savedGoal = localStorage.getItem(`goal_${nickname}`)
     if (savedGoal) setGoal(JSON.parse(savedGoal))
   }, [nickname])
 
-  // Загрузка данных игрока и истории ELO
   useEffect(() => {
     if (!nickname) return
     setLoading(true)
@@ -109,42 +107,34 @@ function CabinetContent() {
     if (data.analyses) setAnalyses(data.analyses)
   }
 
-  // Тестовый анализ (мгновенная генерация метрик)
-  const handleFileParse = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Реальный анализ демки через VPS
+  const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !nickname) return
 
     setParsing(true)
     setParseResult(null)
+    setHighlights([])
 
-    // Имитируем задержку анализа
-    setTimeout(async () => {
-      const stats = {
-        reactionAvg: Math.floor(Math.random() * 80 + 180),
-        accuracyHead: Math.floor(Math.random() * 20 + 30),
-        accuracyBody: Math.floor(Math.random() * 25 + 25),
-        sprayDeviation: Math.floor(Math.random() * 10 + 5),
-        utilityDamage: Math.floor(Math.random() * 150 + 50),
-        flashSuccessRate: Math.floor(Math.random() * 40 + 30),
-        positioningScore: Math.floor(Math.random() * 30 + 50),
-        timingScore: Math.floor(Math.random() * 30 + 50),
-        clutchWins: Math.floor(Math.random() * 3),
-        totalKills: Math.floor(Math.random() * 20 + 10),
-        totalDeaths: Math.floor(Math.random() * 15 + 10),
-        adr: Math.floor(Math.random() * 40 + 60),
-        kdRatio: (Math.random() * 1.5 + 0.8).toFixed(2)
+    const formData = new FormData()
+    formData.append('demo', file)
+    formData.append('nickname', nickname)
+
+    try {
+      const res = await fetch('/api/demo/parse', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.ok) {
+        setParseResult(data.stats)
+        setHighlights(data.highlights || [])
+        alert(`Демка проанализирована! ${data.highlights?.length || 0} хайлайтов сгенерировано.`)
+      } else {
+        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'))
       }
-      setParseResult(stats)
-
-      await fetch('/api/demo/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, stats })
-      }).catch(() => {})
-
+    } catch (err: any) {
+      alert('Ошибка: ' + err.message)
+    } finally {
       setParsing(false)
-      alert('Демка проанализирована (демо-режим)')
-    }, 1000)
+    }
   }
 
   const progressPercent = goal && player
@@ -241,7 +231,7 @@ function CabinetContent() {
                 {parsing && <p className="text-yellow-400 text-sm mb-2">Идёт анализ...</p>}
                 {parseResult && (
                   <div className="bg-gray-900/50 rounded-xl p-4 mb-4">
-                    <p className="text-sm text-green-400 font-semibold mb-2">Результаты анализа (тестовые данные):</p>
+                    <p className="text-sm text-green-400 font-semibold mb-2">Результаты анализа (реальные данные):</p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                       <div>⚡ Реакция: <span className="text-blue-400">{parseResult.reactionAvg} мс</span></div>
                       <div>🎯 Хедшоты: <span className="text-green-400">{parseResult.accuracyHead}%</span></div>
@@ -256,9 +246,17 @@ function CabinetContent() {
                       <div>⚔️ ADR: <span className="text-white">{parseResult.adr}</span></div>
                       <div>🔫 Всего убийств: <span className="text-white">{parseResult.totalKills}</span></div>
                     </div>
+                    {highlights.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm text-green-400 font-semibold mb-2">Сгенерированные хайлайты:</p>
+                        {highlights.map((url, i) => (
+                          <video key={i} src={url} controls className="w-full aspect-video rounded-xl mb-2" />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
-                <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2. Сейчас используется демо-режим (случайные метрики).</p>
+                <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2. Анализ происходит на нашем VPS.</p>
               </div>
 
               <div className="mb-6">
