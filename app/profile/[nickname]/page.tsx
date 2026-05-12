@@ -15,6 +15,7 @@ export default function ProfilePage() {
   const [followerCount, setFollowerCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const [isOwner, setIsOwner] = useState(false)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     // Загружаем профиль из Faceit
@@ -23,7 +24,7 @@ export default function ProfilePage() {
       .then(data => setProfile(data))
       .catch(() => setProfile(null))
 
-    // Загружаем описание из таблицы users (поле bio)
+    // Загружаем описание
     fetch(`/api/profile/${nickname}`)
       .then(r => r.json())
       .then(data => {
@@ -37,28 +38,20 @@ export default function ProfilePage() {
       .then(data => setHighlights(data.highlights || []))
       .catch(() => setHighlights([]))
 
-    // Проверяем, является ли текущий пользователь владельцем
+    // Проверяем авторизацию и является ли пользователь владельцем
     fetch('/api/auth/me')
       .then(r => r.json())
       .then(data => {
-        if (data.user?.faceit_nickname === nickname) {
-          setIsOwner(true)
-          // Автоматически подписываться на самого себя не нужно, скроем кнопку
-        } else {
-          setIsOwner(false)
-          // Статус подписки для чужого профиля
-          const currentUser = localStorage.getItem('currentNickname')
-          if (currentUser) {
-            fetch(`/api/social/follow?follower=${currentUser}&followee=${nickname}`)
-              .then(r => r.json())
-              .then(data => setIsFollowing(data.following))
-              .catch(() => {})
+        if (data.user) {
+          setUser(data.user)
+          if (data.user.faceit_nickname === nickname) {
+            setIsOwner(true)
           }
         }
       })
       .catch(() => {})
 
-    // Количество подписчиков и подписок (для всех профилей)
+    // Количество подписчиков и подписок
     fetch(`/api/social/follow?followee=${nickname}`)
       .then(r => r.json())
       .then(data => setFollowerCount(data.count || 0))
@@ -68,10 +61,20 @@ export default function ProfilePage() {
       .then(r => r.json())
       .then(data => setFollowingCount(data.count || 0))
       .catch(() => {})
-  }, [nickname])
+
+    // Статус подписки (для не-владельца)
+    if (!isOwner) {
+      const currentUser = localStorage.getItem('currentNickname')
+      if (currentUser) {
+        fetch(`/api/social/follow?follower=${currentUser}&followee=${nickname}`)
+          .then(r => r.json())
+          .then(data => setIsFollowing(data.following))
+          .catch(() => {})
+      }
+    }
+  }, [nickname, isOwner])
 
   const handleFollow = async () => {
-    // Только для чужого профиля
     if (isOwner) return
     const currentUser = localStorage.getItem('currentNickname')
     if (!currentUser) return alert('Войдите под своим ником')
@@ -100,19 +103,35 @@ export default function ProfilePage() {
               <span><strong>{followingCount}</strong> подписок</span>
             </div>
             <div className="flex gap-2 mt-2">
-              {isOwner ? (
-                <Link href="/profile/setup" className="px-4 py-1 bg-blue-500 rounded-full text-sm">
-                  Редактировать
-                </Link>
+              {user ? (
+                isOwner ? (
+                  <>
+                    <Link href="/profile/setup" className="px-4 py-1 bg-blue-500 rounded-full text-sm">
+                      Редактировать
+                    </Link>
+                    <Link href="/cabinet" className="px-4 py-1 bg-green-500 rounded-full text-sm">
+                      Загрузить демку
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={handleFollow} className="px-4 py-1 bg-blue-500 rounded-full text-sm">
+                      {isFollowing ? 'Отписаться' : 'Подписаться'}
+                    </button>
+                    <Link href={`/messages/${nickname}`} className="px-4 py-1 bg-gray-700 rounded-full text-sm">
+                      Написать
+                    </Link>
+                  </>
+                )
               ) : (
-                <button onClick={handleFollow} className="px-4 py-1 bg-blue-500 rounded-full text-sm">
-                  {isFollowing ? 'Отписаться' : 'Подписаться'}
-                </button>
-              )}
-              {!isOwner && (
-                <Link href={`/messages/${nickname}`} className="px-4 py-1 bg-gray-700 rounded-full text-sm">
-                  Написать
-                </Link>
+                <>
+                  <Link href="/auth/login" className="px-4 py-1 bg-blue-500 rounded-full text-sm">
+                    Войти
+                  </Link>
+                  <Link href="/auth/signup" className="px-4 py-1 bg-gray-700 rounded-full text-sm">
+                    Регистрация
+                  </Link>
+                </>
               )}
             </div>
           </div>
