@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+export const dynamic = 'force-dynamic'
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`
 
@@ -55,8 +57,7 @@ export async function POST(request: Request) {
 
       case '/link': {
         const nick = args[1]
-        if (!nick) { await sendMessage(chatId, 'Использование: /link ТВОЙ_НИК');
-export const dynamic = 'force-dynamic' break }
+        if (!nick) { await sendMessage(chatId, 'Использование: /link ТВОЙ_НИК'); break }
         await supabase.from('user_links').upsert(
           { telegram_id: telegramId, faceit_nickname: nick },
           { onConflict: 'telegram_id' }
@@ -73,27 +74,43 @@ export const dynamic = 'force-dynamic' break }
         }
         const nick = faceitNick || 'аноним'
         const { error } = await supabase.from('sleep_log').insert({
-          nickname: nick, hours, recorded_at: new Date().toISOString().split('T')[0]
+          nickname: nick,
+          hours,
+          recorded_at: new Date().toISOString().split('T')[0]
         })
-        if (error) { await sendMessage(chatId, '❌ Ошибка: ' + error.message) }
-        else { await sendMessage(chatId, '✅ Сон ' + hours + ' ч записан для ' + nick) }
+        if (error) {
+          await sendMessage(chatId, '❌ Ошибка: ' + error.message)
+        } else {
+          await sendMessage(chatId, '✅ Сон ' + hours + ' ч записан для ' + nick)
+        }
         break
       }
 
       case '/mood': {
         const mood = args.slice(1).join(' ')
-        if (!mood) { await sendMessage(chatId, 'Укажи настроение, например: /mood отличное'); break }
+        if (!mood) {
+          await sendMessage(chatId, 'Укажи настроение, например: /mood отличное')
+          break
+        }
         const nick = faceitNick || 'аноним'
         const { error } = await supabase.from('mood_log').insert({
-          nickname: nick, mood, recorded_at: new Date().toISOString().split('T')[0]
+          nickname: nick,
+          mood,
+          recorded_at: new Date().toISOString().split('T')[0]
         })
-        if (error) { await sendMessage(chatId, '❌ Ошибка: ' + error.message) }
-        else { await sendMessage(chatId, '✅ Настроение «' + mood + '» записано для ' + nick) }
+        if (error) {
+          await sendMessage(chatId, '❌ Ошибка: ' + error.message)
+        } else {
+          await sendMessage(chatId, '✅ Настроение «' + mood + '» записано для ' + nick)
+        }
         break
       }
 
       case '/elo': {
-        if (!faceitNick) { await sendMessage(chatId, 'Сначала привяжи Faceit: /link ТВОЙ_НИК'); break }
+        if (!faceitNick) {
+          await sendMessage(chatId, 'Сначала привяжи Faceit: /link ТВОЙ_НИК')
+          break
+        }
         const { data } = await supabase
           .from('elo_history')
           .select('elo')
@@ -113,7 +130,10 @@ export const dynamic = 'force-dynamic' break }
       }
 
       case '/stats': {
-        if (!faceitNick) { await sendMessage(chatId, 'Сначала привяжи Faceit: /link ТВОЙ_НИК'); break }
+        if (!faceitNick) {
+          await sendMessage(chatId, 'Сначала привяжи Faceit: /link ТВОЙ_НИК')
+          break
+        }
         const { data: sleepData } = await supabase
           .from('sleep_log')
           .select('hours')
@@ -145,4 +165,3 @@ async function sendMessage(chatId: number, text: string) {
     body: JSON.stringify({ chat_id: chatId, text })
   })
 }
-
