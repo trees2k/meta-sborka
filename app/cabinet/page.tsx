@@ -292,11 +292,32 @@ function CabinetContent() {
       setFoundHighlights(detected)
 
       // Сохраняем хайлайты в Supabase
-      if (detected.length > 0) {
+       if (detected.length > 0) {
+        setParseProgress('Генерация видео-клипов...')
+
+        const withClips = await Promise.all(
+          detected.map(async (h: any) => {
+            try {
+              const clipRes = await fetch(`${vpsUrl}/generate-clip`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(h)
+              })
+              const clipData = await clipRes.json()
+              if (clipData.status === 'ok') {
+                return { ...h, video_url: `${vpsUrl}${clipData.video_url}` }
+              }
+            } catch {}
+            return h
+          })
+        )
+
+        setFoundHighlights(withClips)
+
         await fetch('/api/highlights/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ highlights: detected })
+          body: JSON.stringify({ highlights: withClips })
         })
       }
 

@@ -144,33 +144,49 @@ export default function HighlightsPage() {
           <p className="text-white/50 text-sm">{currentIndex + 1} / {highlights.length}</p>
         </div>
 
-        {/* Контент */}
-        <div className="text-center px-8 max-w-lg">
-          <p className="text-8xl mb-4 drop-shadow-lg animate-bounce">{h.emoji}</p>
-          <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">{h.type}</h1>
-          <p className="text-lg text-white/80 mb-6">{h.description}</p>
+                {/* Контент */}
+        <div className="text-center px-8 max-w-lg relative z-10">
+          {h.video_url && (
+            <video
+              src={h.video_url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover z-0"
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+            />
+          )}
 
-          <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-4 mb-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold">{h.kills}</p>
-                <p className="text-xs text-white/50">KILLS</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{h.deaths}</p>
-                <p className="text-xs text-white/50">DEATHS</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-400">{h.kd?.toFixed(2)}</p>
-                <p className="text-xs text-white/50">K/D</p>
-              </div>
-            </div>
-          </div>
+          {!h.video_url && (
+            <>
+              <p className="text-8xl mb-4 drop-shadow-lg animate-bounce">{h.emoji}</p>
+              <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">{h.type}</h1>
+              <p className="text-lg text-white/80 mb-6">{h.description}</p>
 
-          <div className="flex items-center justify-center gap-2 text-white/60">
-            <span className="text-sm">🗺️ {h.map}</span>
-            {h.round_number && <span className="text-sm">· Раунд {h.round_number}</span>}
-          </div>
+              <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-4 mb-4">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-2xl font-bold">{h.kills}</p>
+                    <p className="text-xs text-white/50">KILLS</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{h.deaths}</p>
+                    <p className="text-xs text-white/50">DEATHS</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-blue-400">{h.kd?.toFixed(2)}</p>
+                    <p className="text-xs text-white/50">K/D</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-white/60">
+                <span className="text-sm">🗺️ {h.map}</span>
+                {h.round_number && <span className="text-sm">· Раунд {h.round_number}</span>}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Ник игрока */}
