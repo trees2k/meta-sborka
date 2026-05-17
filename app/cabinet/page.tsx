@@ -22,7 +22,7 @@ function CabinetContent() {
   const [analyses, setAnalyses] = useState<any[]>([])
   const [parseResult, setParseResult] = useState<any>(null)
   const [parsing, setParsing] = useState(false)
-  const [highlights, setHighlights] = useState<string[]>([])
+  const [parseProgress, setParseProgress] = useState('')
 
   useEffect(() => {
     const paramNick = searchParams.get('nickname')
@@ -107,31 +107,106 @@ function CabinetContent() {
     if (data.analyses) setAnalyses(data.analyses)
   }
 
-  // Реальный анализ демки через VPS
+  // Загрузка напрямую на VPS (минуя Cloudflare лимит 100МБ)
   const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !nickname) return
 
     setParsing(true)
     setParseResult(null)
-    setHighlights([])
+    setParseProgress('Загрузка файла на сервер...')
+
+    const vpsUrl = process.env.NEXT_PUBLIC_VPS_URL
+    if (!vpsUrl) {
+      alert('VPS URL не настроен')
+      setParsing(false)
+      return
+    }
 
     const formData = new FormData()
-    formData.append('demo', file)
-    formData.append('nickname', nickname)
+    formData.append('file', file)
 
     try {
-      const res = await fetch('/api/demo/parse', { method: 'POST', body: formData })
+      setParseProgress(`Загрузка ${(file.size / 1024 / 1024).toFixed(0)} МБ...`)
+
+      const res = await fetch(`${vpsUrl}/analyze`, {
+        method: 'POST',
+        body: formData,
+      })
       const data = await res.json()
-      if (data.ok) {
-        setParseResult(data.stats)
-        setHighlights(data.highlights || [])
-        alert(`Демка проанализирована! ${data.highlights?.length || 0} хайлайтов сгенерировано.`)
-      } else {
-        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'))
+
+      if (data.status !== 'ok') {
+        alert('Ошибка анализа: ' + (data.detail || data.stderr || 'Неизвестная'))
+        setParsing(false)
+        setParseProgress('')
+        return
       }
+
+      setParseProgress('Обработка результатов...')
+
+      // Ищем игрока по нику
+      const players = data.data?.players || {}
+      let found: any = null
+
+      for (const [steamId, p] of Object.entries(players) as any) {
+        if (p.name === nickname) {
+          found = p
+          break
+        }
+      }
+
+      // Если по нику не нашли — берём первого
+      if (!found) {
+        const allPlayers = Object.values(players) as any[]
+        if (allPlayers.length > 0) {
+          found = allPlayers[0]
+        }
+      }
+
+      if (!found) {
+        alert('Игрок не найден в демке. Проверьте никнейм.')
+        setParsing(false)
+        setParseProgress('')
+        return
+      }
+
+      const rounds = data.data?.rounds?.length || 1
+      const stats = {
+        name: found.name,
+        kills: found.killCount || 0,
+        deaths: found.deathCount || 0,
+        assists: found.assistCount || 0,
+        kd: found.killDeathRatio || 0,
+        kast: found.kast || 0,
+        headshotPercent: found.headshotPercent || 0,
+        headshotCount: found.headshotCount || 0,
+        adr: Math.round((found.healthDamage || 0) / rounds),
+        utilityDamage: found.utilityDamage || 0,
+        mvps: found.mvpCount || 0,
+        score: found.score || 0,
+        clutch1v1Won: found.oneVsOneWonCount || 0,
+        clutch1v2Won: found.oneVsTwoWonCount || 0,
+        clutch1v3Won: found.oneVsThreeWonCount || 0,
+        clutch1v4Won: found.oneVsFourWonCount || 0,
+        clutch1v5Won: found.oneVsFiveWonCount || 0,
+        map: data.data?.mapName || 'unknown',
+      }
+
+      setParseResult(stats)
+      setParseProgress('')
+
+      // Сохраняем в историю
+      try {
+        await fetch('/api/demo/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nickname, ...stats })
+        })
+      } catch {}
+
     } catch (err: any) {
       alert('Ошибка: ' + err.message)
+      setParseProgress('')
     } finally {
       setParsing(false)
     }
@@ -228,35 +303,40 @@ function CabinetContent() {
                   disabled={parsing}
                   className="mb-2 text-sm"
                 />
-                {parsing && <p className="text-yellow-400 text-sm mb-2">Идёт анализ...</p>}
-                {parseResult && (
-                  <div className="bg-gray-900/50 rounded-xl p-4 mb-4">
-                    <p className="text-sm text-green-400 font-semibold mb-2">Результаты анализа (реальные данные):</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                      <div>⚡ Реакция: <span className="text-blue-400">{parseResult.reactionAvg} мс</span></div>
-                      <div>🎯 Хедшоты: <span className="text-green-400">{parseResult.accuracyHead}%</span></div>
-                      <div>💪 Попадания в тело: <span className="text-yellow-400">{parseResult.accuracyBody}%</span></div>
-                      <div>💥 Спрей: <span className="text-red-400">{parseResult.sprayDeviation} px</span></div>
-                      <div>🔥 Урон гранат: <span className="text-orange-400">{parseResult.utilityDamage}</span></div>
-                      <div>💣 Флешки: <span className="text-purple-400">{parseResult.flashSuccessRate}%</span></div>
-                      <div>🗺️ Позиция: <span className="text-cyan-400">{parseResult.positioningScore}/100</span></div>
-                      <div>⏱️ Тайминги: <span className="text-pink-400">{parseResult.timingScore}/100</span></div>
-                      <div>🏆 Клатчи: <span className="text-emerald-400">{parseResult.clutchWins}</span></div>
-                      <div>💀 K/D: <span className="text-white">{parseResult.kdRatio}</span></div>
-                      <div>⚔️ ADR: <span className="text-white">{parseResult.adr}</span></div>
-                      <div>🔫 Всего убийств: <span className="text-white">{parseResult.totalKills}</span></div>
-                    </div>
-                    {highlights.length > 0 && (
-                      <div className="mt-4">
-                        <p className="text-sm text-green-400 font-semibold mb-2">Сгенерированные хайлайты:</p>
-                        {highlights.map((url, i) => (
-                          <video key={i} src={url} controls className="w-full aspect-video rounded-xl mb-2" />
-                        ))}
-                      </div>
-                    )}
+                {parsing && (
+                  <div className="text-yellow-400 text-sm mb-2">
+                    <p>⏳ {parseProgress}</p>
+                    <p className="text-gray-500 text-xs mt-1">Большие файлы могут загружаться 3-5 минут</p>
                   </div>
                 )}
-                <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2. Анализ происходит на нашем VPS.</p>
+
+                {parseResult && (
+                  <div className="bg-gray-900/50 rounded-xl p-4 mb-4">
+                    <p className="text-sm text-green-400 font-semibold mb-1">
+                      ✅ Результаты анализа — {parseResult.name}
+                    </p>
+                    <p className="text-xs text-gray-500 mb-3">Карта: {parseResult.map}</p>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                      <div>💀 Убийства: <span className="text-white font-bold">{parseResult.kills}</span></div>
+                      <div>☠️ Смерти: <span className="text-white font-bold">{parseResult.deaths}</span></div>
+                      <div>🤝 Ассисты: <span className="text-white font-bold">{parseResult.assists}</span></div>
+                      <div>⚔️ K/D: <span className="text-blue-400 font-bold">{parseResult.kd?.toFixed(2)}</span></div>
+                      <div>🔥 ADR: <span className="text-orange-400 font-bold">{parseResult.adr}</span></div>
+                      <div>🎯 HS%: <span className="text-green-400 font-bold">{parseResult.headshotPercent?.toFixed(1)}%</span></div>
+                      <div>📊 KAST: <span className="text-cyan-400 font-bold">{parseResult.kast?.toFixed(1)}%</span></div>
+                      <div>🔫 HS: <span className="text-yellow-400 font-bold">{parseResult.headshotCount}</span></div>
+                      <div>💥 Урон утилит: <span className="text-purple-400 font-bold">{parseResult.utilityDamage}</span></div>
+                      <div>⭐ MVP: <span className="text-yellow-400 font-bold">{parseResult.mvps}</span></div>
+                      <div>🏆 1v1: <span className="text-emerald-400 font-bold">{parseResult.clutch1v1Won}</span></div>
+                      <div>🏆 1v2+: <span className="text-emerald-400 font-bold">
+                        {(parseResult.clutch1v2Won || 0) + (parseResult.clutch1v3Won || 0) + (parseResult.clutch1v4Won || 0) + (parseResult.clutch1v5Won || 0)}
+                      </span></div>
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2. Файл загружается напрямую на наш сервер.</p>
               </div>
 
               <div className="mb-6">
@@ -296,12 +376,14 @@ function CabinetContent() {
                   <div className="space-y-3">
                     {analyses.map((a: any, i: number) => (
                       <div key={i} className="bg-gray-900/50 rounded-xl p-4">
-                        <p className="text-sm text-gray-400">Анализ от {new Date(a.created_at).toLocaleDateString('ru-RU')}</p>
+                        <p className="text-sm text-gray-400">
+                          {a.map} · {new Date(a.created_at).toLocaleDateString('ru-RU')}
+                        </p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-sm">
-                          <div>Реакция: <span className="text-blue-400">{a.reaction_avg_ms} мс</span></div>
-                          <div>Хедшоты: <span className="text-green-400">{a.accuracy_head}%</span></div>
-                          <div>Флешки: <span className="text-yellow-400">{a.flash_success_rate}%</span></div>
-                          <div>Урон гранат: <span className="text-red-400">{a.utility_damage}</span></div>
+                          <div>K/D: <span className="text-blue-400">{a.kd?.toFixed(2)}</span></div>
+                          <div>ADR: <span className="text-orange-400">{a.adr}</span></div>
+                          <div>HS%: <span className="text-green-400">{a.headshot_percent?.toFixed(1)}%</span></div>
+                          <div>KAST: <span className="text-cyan-400">{a.kast?.toFixed(1)}%</span></div>
                         </div>
                       </div>
                     ))}
