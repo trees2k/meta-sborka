@@ -133,7 +133,61 @@ export default function HighlightsPage() {
 
   return (
     <div ref={containerRef} className="h-screen w-full overflow-hidden bg-black relative select-none">
-      
+       {/* Карточка хайлайта */}
+      <div
+        className={`h-full w-full flex flex-col items-center justify-center relative transition-all duration-300 ${!h.video_url ? `bg-gradient-to-b ${bgColor}` : 'bg-black'}`}
+        onClick={() => handleDoubleTap(h.id)}
+      >
+        {/* Видео фон */}
+        {h.video_url && (
+          <video
+            key={h.video_url}
+            src={h.video_url}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-contain z-0"
+          />
+        )}
+
+        {/* Контент поверх видео (только если нет видео) */}
+        {!h.video_url && (
+          <div className="text-center px-8 max-w-lg z-10">
+            <p className="text-8xl mb-4 drop-shadow-lg animate-bounce">{h.emoji}</p>
+            <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">{h.type}</h1>
+            <p className="text-lg text-white/80 mb-6">{h.description}</p>
+
+            <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-4 mb-4">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold">{h.kills}</p>
+                  <p className="text-xs text-white/50">KILLS</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{h.deaths}</p>
+                  <p className="text-xs text-white/50">DEATHS</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-blue-400">{h.kd?.toFixed(2)}</p>
+                  <p className="text-xs text-white/50">K/D</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-white/60">
+              <span className="text-sm">🗺️ {h.map}</span>
+              {h.round_number && <span className="text-sm">· Раунд {h.round_number}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Верхняя панель */}
+        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
+          <Link href="/cabinet" className="text-white/70 hover:text-white text-sm">← Кабинет</Link>
+          <p className="text-white/50 text-sm">{currentIndex + 1} / {highlights.length}</p>
+        </div>
+
         {/* Ник игрока */}
         <div className="absolute bottom-24 left-4 z-10">
           <Link href={`/profile/${h.nickname}`} className="flex items-center gap-2 hover:opacity-80">
@@ -147,7 +201,7 @@ export default function HighlightsPage() {
           </Link>
         </div>
 
-        {/* Кнопки справа (как в Reels) */}
+        {/* Кнопки справа */}
         <div className="absolute bottom-24 right-4 flex flex-col items-center gap-6 z-10">
           <button onClick={(e) => { e.stopPropagation(); handleLike(h.id) }} className="flex flex-col items-center gap-1">
             <Heart size={28} fill={likedIds.has(h.id) ? '#ef4444' : 'none'} className={likedIds.has(h.id) ? 'text-red-500' : 'text-white'} />
@@ -165,57 +219,20 @@ export default function HighlightsPage() {
 
         {/* Навигация */}
         {currentIndex > 0 && (
-          <button onClick={() => goTo(-1)} className="absolute top-1/2 -translate-y-12 left-1/2 -translate-x-1/2 opacity-30 hover:opacity-70">
+          <button onClick={() => goTo(-1)} className="absolute top-1/2 -translate-y-12 left-1/2 -translate-x-1/2 opacity-30 hover:opacity-70 z-10">
             <ChevronUp size={40} />
           </button>
         )}
         {currentIndex < highlights.length - 1 && (
-          <button onClick={() => goTo(1)} className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-30 hover:opacity-70 animate-bounce">
+          <button onClick={() => goTo(1)} className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-30 hover:opacity-70 animate-bounce z-10">
             <ChevronDown size={40} />
           </button>
         )}
 
-        {/* Анимация сердца при двойном тапе */}
+        {/* Анимация лайка */}
         {heartAnim && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
             <Heart size={120} fill="#ef4444" className="text-red-500 animate-ping" />
           </div>
         )}
       </div>
-
-      {/* Комментарии */}
-      {showComments && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur-md rounded-t-3xl p-4 z-30 max-h-[60vh] flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold">Комментарии</h3>
-            <button onClick={() => setShowComments(false)} className="text-gray-400">✕</button>
-          </div>
-          <div className="flex-1 overflow-y-auto space-y-3 mb-4">
-            {comments.length === 0 && <p className="text-gray-500 text-sm text-center">Нет комментариев</p>}
-            {comments.map((c, i) => (
-              <div key={i} className="flex gap-2">
-                <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                  {c.nickname?.[0]?.toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-sm"><span className="font-semibold">{c.nickname}</span> {c.text}</p>
-                  <p className="text-xs text-gray-500">{new Date(c.created_at).toLocaleDateString('ru-RU')}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendComment()}
-              placeholder="Написать комментарий..."
-              className="flex-1 px-4 py-2 bg-gray-800 rounded-xl text-sm"
-            />
-            <button onClick={sendComment} className="px-4 py-2 bg-blue-500 rounded-xl text-sm font-semibold">→</button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
