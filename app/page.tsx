@@ -552,18 +552,27 @@ function AnalysisSection() {
                 Карта: {s.map}
               </text>
               {/* Убийства */}
-              {kills.slice(0, 30).map((k: any, i: number) => {
-                // Нормализуем координаты CS2 в SVG (примерный диапазон)
-                const svgX = Math.min(Math.max(((k.x + 2000) / 4000) * 420 + 40, 40), 460)
-                const svgY = Math.min(Math.max(((k.y + 2000) / 4000) * 420 + 40, 40), 460)
-                return <circle key={i} cx={svgX} cy={svgY} r="6" fill="#0f6e56" stroke="#1d9e75" strokeWidth="1.5" opacity="0.8"/>
-              })}
-              {/* Смерти */}
-              {deaths.map((d: any, i: number) => {
-                const svgX = Math.min(Math.max(((d.x + 2000) / 4000) * 420 + 40, 40), 460)
-                const svgY = Math.min(Math.max(((d.y + 2000) / 4000) * 420 + 40, 40), 460)
-                return <circle key={i} cx={svgX} cy={svgY} r="9" fill="#7f1515" stroke="#e24b4a" strokeWidth="2" opacity="0.9"/>
-              })}
+{kills.slice(0, 30).map((k: any, i: number) => {
+  const allX = [...deaths.map((d:any) => d.x), ...kills.map((k:any) => k.x)]
+  const allY = [...deaths.map((d:any) => d.y), ...kills.map((k:any) => k.y)]
+  const minX = Math.min(...allX), maxX = Math.max(...allX)
+  const minY = Math.min(...allY), maxY = Math.max(...allY)
+  const rangeX = maxX - minX || 1, rangeY = maxY - minY || 1
+  const svgX = ((k.x - minX) / rangeX) * 380 + 60
+  const svgY = ((maxY - k.y) / rangeY) * 380 + 60
+  return <circle key={i} cx={svgX} cy={svgY} r="6" fill="#0f6e56" stroke="#1d9e75" strokeWidth="1.5" opacity="0.8"/>
+})}
+{/* Смерти */}
+{deaths.map((d: any, i: number) => {
+  const allX = [...deaths.map((d:any) => d.x), ...kills.map((k:any) => k.x)]
+  const allY = [...deaths.map((d:any) => d.y), ...kills.map((k:any) => k.y)]
+  const minX = Math.min(...allX), maxX = Math.max(...allX)
+  const minY = Math.min(...allY), maxY = Math.max(...allY)
+  const rangeX = maxX - minX || 1, rangeY = maxY - minY || 1
+  const svgX = ((d.x - minX) / rangeX) * 380 + 60
+  const svgY = ((maxY - d.y) / rangeY) * 380 + 60
+  return <circle key={i} cx={svgX} cy={svgY} r="9" fill="#7f1515" stroke="#e24b4a" strokeWidth="2" opacity="0.9"/>
+})}
             </svg>
           </div>
           <div className="flex gap-4 flex-wrap text-xs text-gray-400">
