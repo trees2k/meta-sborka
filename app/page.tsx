@@ -296,22 +296,13 @@ function AnalysisSection() {
     setLoading(true)
     setError(null)
     setAnalysis(null)
-
     try {
       const form = new FormData()
       form.append('file', file)
-
-      const res = await fetch('/api/demo/analysis', {
-        method: 'POST',
-        body: form,
-      })
+      const res = await fetch('/api/demo/analysis', { method: 'POST', body: form })
       const json = await res.json()
-
-      if (json.status === 'ok') {
-        setAnalysis(json.analysis)
-      } else {
-        setError(json.detail || json.error || 'Ошибка анализа')
-      }
+      if (json.status === 'ok') setAnalysis(json.analysis)
+      else setError(json.detail || json.error || 'Ошибка анализа')
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -320,14 +311,13 @@ function AnalysisSection() {
   }
 
   const stats = analysis ? [
-    { label: 'K/D',     you: String(analysis.stats.kd),    pro: '1.2',  youW: Math.min(analysis.stats.kd * 25, 100), proW: 55, good: analysis.stats.kd >= 1.2 },
-    { label: 'ADR',     you: String(analysis.stats.adr),   pro: '85',   youW: Math.min(analysis.stats.adr, 100),      proW: 60, good: analysis.stats.adr >= 85 },
-    { label: 'HS%',     you: `${analysis.stats.hs}%`,      pro: '50%',  youW: analysis.stats.hs,                      proW: 50, good: analysis.stats.hs >= 50 },
-    { label: 'Утилита', you: String(analysis.stats.utility_damage), pro: '40+', youW: Math.min(analysis.stats.utility_damage * 2, 100), proW: 40, good: analysis.stats.utility_damage >= 30 },
-    { label: 'KAST',    you: `${analysis.stats.kast}%`,   pro: '73%',  youW: analysis.stats.kast,                    proW: 73, good: analysis.stats.kast >= 73 },
+    { label: 'K/D',     you: String(analysis.stats.kd),               pro: '1.2',  youW: Math.min(analysis.stats.kd * 25, 100),              proW: 55, good: analysis.stats.kd >= 1.2 },
+    { label: 'ADR',     you: String(analysis.stats.adr),              pro: '85',   youW: Math.min(analysis.stats.adr, 100),                   proW: 60, good: analysis.stats.adr >= 85 },
+    { label: 'HS%',     you: `${analysis.stats.hs}%`,                 pro: '50%',  youW: analysis.stats.hs,                                   proW: 50, good: analysis.stats.hs >= 50 },
+    { label: 'Утилита', you: String(analysis.stats.utility_damage),   pro: '40+',  youW: Math.min(analysis.stats.utility_damage * 2, 100),    proW: 40, good: analysis.stats.utility_damage >= 30 },
+    { label: 'KAST',    you: `${analysis.stats.kast}%`,               pro: '73%',  youW: analysis.stats.kast,                                 proW: 73, good: analysis.stats.kast >= 73 },
   ] : []
 
-  // Экран загрузки демки
   if (!analysis && !loading) {
     return (
       <div className="space-y-6">
@@ -335,7 +325,6 @@ function AnalysisSection() {
           <h2 className="text-3xl font-black">Разбор ошибок</h2>
           <p className="text-gray-400 mt-1">Загрузи демку — получишь детальный разбор с картой и советами</p>
         </div>
-
         <label className="block bg-gray-800/50 border-2 border-dashed border-gray-600 hover:border-red-500/50 rounded-2xl p-12 text-center cursor-pointer transition-all group">
           <input type="file" accept=".dem" className="hidden" onChange={handleFile} />
           <Swords size={48} className="text-red-400 mx-auto mb-4 group-hover:scale-110 transition-transform" />
@@ -345,13 +334,11 @@ function AnalysisSection() {
             Выбрать файл
           </div>
         </label>
-
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-400 text-sm">
             ⚠️ {error}
           </div>
         )}
-
         <div className="bg-gray-800/50 rounded-2xl p-5 space-y-3">
           <p className="text-sm text-gray-400 font-semibold">Что получишь после анализа:</p>
           {[
@@ -369,7 +356,6 @@ function AnalysisSection() {
     )
   }
 
-  // Экран загрузки
   if (loading) {
     return (
       <div className="space-y-6">
@@ -388,12 +374,17 @@ function AnalysisSection() {
     )
   }
 
-  // Результаты
   const s = analysis.stats
   const errors = analysis.errors || []
   const rounds = analysis.rounds || []
   const deaths = analysis.deaths || []
   const kills = analysis.kills || []
+
+  const calcPos = (pts: any[]) => {
+    if (!pts.length) return { minX: 0, maxX: 1, minY: 0, maxY: 1 }
+    const allX = pts.map(p => p.x), allY = pts.map(p => p.y)
+    return { minX: Math.min(...allX), maxX: Math.max(...allX), minY: Math.min(...allY), maxY: Math.max(...allY) }
+  }
 
   return (
     <div className="space-y-6">
@@ -415,7 +406,6 @@ function AnalysisSection() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
         {tabs.map(t => (
           <button
@@ -457,7 +447,6 @@ function AnalysisSection() {
               ))}
             </div>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5">
               <p className="text-sm text-gray-400 mb-3">Сильные стороны</p>
@@ -521,7 +510,6 @@ function AnalysisSection() {
                 </div>
                 <span className={`text-gray-500 transition-transform ${openErr === i ? 'rotate-180' : ''}`}>▼</span>
               </button>
-
               {openErr === i && (
                 <div className="px-5 pb-5 space-y-3">
                   <p className="text-sm text-gray-300 leading-relaxed">{e.desc}</p>
@@ -545,35 +533,32 @@ function AnalysisSection() {
         <div className="space-y-4">
           <div className="bg-gray-900 rounded-2xl p-4">
             <p className="text-xs text-gray-500 mb-3">{s.map} — {deaths.length} смертей · {kills.length} убийств</p>
-            <svg viewBox="0 0 500 500" className="w-full rounded-xl">
-              <rect width="500" height="500" fill="#1a1f2e" rx="8"/>
-              <rect x="40" y="40" width="420" height="420" fill="#1e2535" rx="4"/>
-              <text x="250" y="250" fill="#2a3550" fontSize="14" textAnchor="middle">
-                Карта: {s.map}
-              </text>
-              {/* Убийства */}
-{kills.slice(0, 30).map((k: any, i: number) => {
-  const allX = [...deaths.map((d:any) => d.x), ...kills.map((k:any) => k.x)]
-  const allY = [...deaths.map((d:any) => d.y), ...kills.map((k:any) => k.y)]
-  const minX = Math.min(...allX), maxX = Math.max(...allX)
-  const minY = Math.min(...allY), maxY = Math.max(...allY)
-  const rangeX = maxX - minX || 1, rangeY = maxY - minY || 1
-  const svgX = ((k.x - minX) / rangeX) * 380 + 60
-  const svgY = ((maxY - k.y) / rangeY) * 380 + 60
-  return <circle key={i} cx={svgX} cy={svgY} r="6" fill="#0f6e56" stroke="#1d9e75" strokeWidth="1.5" opacity="0.8"/>
-})}
-{/* Смерти */}
-{deaths.map((d: any, i: number) => {
-  const allX = [...deaths.map((d:any) => d.x), ...kills.map((k:any) => k.x)]
-  const allY = [...deaths.map((d:any) => d.y), ...kills.map((k:any) => k.y)]
-  const minX = Math.min(...allX), maxX = Math.max(...allX)
-  const minY = Math.min(...allY), maxY = Math.max(...allY)
-  const rangeX = maxX - minX || 1, rangeY = maxY - minY || 1
-  const svgX = ((d.x - minX) / rangeX) * 380 + 60
-  const svgY = ((maxY - d.y) / rangeY) * 380 + 60
-  return <circle key={i} cx={svgX} cy={svgY} r="9" fill="#7f1515" stroke="#e24b4a" strokeWidth="2" opacity="0.9"/>
-})}
-            </svg>
+            <div className="relative rounded-xl overflow-hidden" style={{aspectRatio:'1'}}>
+              <img
+                src={`https://totalcsgo.com/images/maps/map-${s.map}.jpg`}
+                className="w-full h-full object-cover opacity-40"
+                onError={(e) => (e.currentTarget.style.display='none')}
+              />
+              <svg viewBox="0 0 500 500" className="absolute inset-0 w-full h-full">
+                {(() => {
+                  const all = [...deaths, ...kills]
+                  if (!all.length) return null
+                  const { minX, maxX, minY, maxY } = calcPos(all)
+                  const rX = maxX - minX || 1
+                  const rY = maxY - minY || 1
+                  const sx = (x: number) => ((x - minX) / rX) * 420 + 40
+                  const sy = (y: number) => ((maxY - y) / rY) * 420 + 40
+                  return <>
+                    {kills.slice(0, 50).map((k: any, i: number) => (
+                      <circle key={`k${i}`} cx={sx(k.x)} cy={sy(k.y)} r="7" fill="#0f6e56" stroke="#1d9e75" strokeWidth="1.5" opacity="0.85"/>
+                    ))}
+                    {deaths.map((d: any, i: number) => (
+                      <circle key={`d${i}`} cx={sx(d.x)} cy={sy(d.y)} r="10" fill="#7f1515" stroke="#e24b4a" strokeWidth="2" opacity="0.9"/>
+                    ))}
+                  </>
+                })()}
+              </svg>
+            </div>
           </div>
           <div className="flex gap-4 flex-wrap text-xs text-gray-400">
             <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500 inline-block"/>Смерть ({deaths.length})</span>
@@ -581,117 +566,6 @@ function AnalysisSection() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-const sections: Record<string, () => React.ReactNode> = {
-  info: InfoSection,
-  updates: UpdatesSection,
-  team: TeamSection,
-  warmup: WarmupSection,
-  lineups: LineupsSection,
-  training: TrainingSection,
-  stats: StatsSection,
-  analysis: AnalysisSection,
-}
-
-export default function Home() {
-  const [activeSection, setActiveSection] = useState('info')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [nickname, setNickname] = useState('')
-
-  useEffect(() => {
-    const saved = localStorage.getItem('currentNickname')
-    if (saved) setNickname(saved)
-  }, [])
-
-  const ActiveComponent = sections[activeSection]
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white flex">
-      {/* Мобильная кнопка меню */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 md:hidden bg-gray-800 p-2 rounded-xl"
-      >
-        {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
-
-      {/* Оверлей для мобильного */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Сайдбар */}
-      <aside className={`
-        fixed md:sticky top-0 left-0 h-screen w-72 bg-gray-950/95 backdrop-blur-md
-        border-r border-gray-800/50 flex flex-col z-40
-        transition-transform duration-300
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-      `}>
-        {/* Логотип */}
-        <div className="p-6 border-b border-gray-800/50">
-          <h1 className="text-2xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            UFUTURE
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">Киберспортивная платформа</p>
-        </div>
-
-        {/* Меню */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            const isActive = activeSection === item.id
-            return (
-              <button
-                key={item.id}
-                onClick={() => { setActiveSection(item.id); setSidebarOpen(false) }}
-                className={`
-                  w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all
-                  ${isActive
-                    ? `bg-gradient-to-r ${item.color} text-white shadow-lg`
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-                  }
-                `}
-              >
-                <Icon size={20} />
-                <span className="font-medium">{item.label}</span>
-              </button>
-            )
-          })}
-        </nav>
-
-        {/* Нижняя часть */}
-        <div className="p-4 border-t border-gray-800/50 space-y-2">
-          <Link href="/highlights" className="flex items-center gap-2 px-4 py-2 text-sm text-pink-400 hover:bg-gray-800/50 rounded-xl transition-all">
-            <Play size={16} /> Хайлайты
-          </Link>
-          <Link href="/cabinet" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
-            <BarChart3 size={16} /> Кабинет
-          </Link>
-          <Link href="/blog" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:bg-gray-800/50 rounded-xl transition-all">
-            <Star size={16} /> Блог
-          </Link>
-
-          {nickname && (
-            <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-3 bg-gray-800/50 rounded-xl mt-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold">
-                {nickname[0]?.toUpperCase()}
-              </div>
-              <div>
-                <p className="text-sm font-semibold">{nickname}</p>
-                <p className="text-xs text-gray-500">Профиль</p>
-              </div>
-            </Link>
-          )}
-        </div>
-      </aside>
-
-      {/* Контент */}
-      <main className="flex-1 p-6 md:p-10 max-w-4xl">
-        <ActiveComponent />
-      </main>
     </div>
   )
 }
