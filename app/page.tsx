@@ -276,6 +276,98 @@ function StatsSection() {
     </div>
   )
 }
+
+function SteamDemoFinder({ onAnalysis, onLoading, onError }: {
+  onAnalysis: (a: any) => void
+  onLoading: (l: boolean) => void
+  onError: (e: string | null) => void
+}) {
+  const [shareCode, setShareCode] = useState('')
+  const [steamid, setSteamid] = useState('')
+  const [step, setStep] = useState<'input'|'loading'>('input')
+
+  const analyze = async () => {
+    if (!shareCode.trim()) return
+    setStep('loading')
+    onLoading(true)
+    onError(null)
+
+    try {
+      // Получаем demo_url через Steam API
+      const res = await fetch(`/api/steam?code=${encodeURIComponent(shareCode)}&steamid=${steamid}`)
+      const data = await res.json()
+
+      if (data.error) {
+        onError(data.error)
+        setStep('input')
+        onLoading(false)
+        return
+      }
+
+      // Отправляем на анализ
+      const analysisRes = await fetch('/api/demo/steam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demo_url: data.demo_url, nickname: steamid }),
+      })
+      const analysis = await analysisRes.json()
+
+      if (analysis.status === 'ok') onAnalysis(analysis.analysis)
+      else onError(analysis.detail || analysis.error || 'Ошибка анализа')
+
+    } catch (e: any) {
+      onError(e.message)
+    } finally {
+      setStep('input')
+      onLoading(false)
+    }
+  }
+
+  return (
+    <div className="bg-gray-800/50 rounded-2xl p-6 space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+          <TrendingUp size={16} className="text-blue-400" />
+        </div>
+        <div>
+          <h3 className="font-bold">Premier матчи (Steam)</h3>
+          <p className="text-xs text-gray-400">Введи Share Code из CS2 → Настройки → Аккаунт</p>
+        </div>
+      </div>
+
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300">
+        📋 Как найти Share Code: CS2 → Настройки ⚙️ → Аккаунт → Последние матчи → Поделиться
+      </div>
+
+      <input
+        type="text"
+        value={steamid}
+        onChange={e => setSteamid(e.target.value)}
+        placeholder="Steam ID (76561198...)"
+        className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+      />
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={shareCode}
+          onChange={e => setShareCode(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && analyze()}
+          placeholder="CSGO-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+          className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+        />
+        <button
+          onClick={analyze}
+          disabled={step === 'loading' || !shareCode.trim()}
+          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 rounded-xl text-sm font-semibold transition-all"
+        >
+          {step === 'loading' ? '...' : 'Разобрать'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function FaceitDemoFinder({ onAnalysis, onLoading, onError }: {
   onAnalysis: (a: any) => void
   onLoading: (l: boolean) => void
@@ -434,6 +526,8 @@ function AnalysisSection() {
         <h2 className="text-3xl font-black">Разбор ошибок</h2>
         <p className="text-gray-400 mt-1">Загрузи демку или найди автоматически с Faceit</p>
       </div>
+
+      <SteamDemoFinder onAnalysis={setAnalysis} onLoading={setLoading} onError={setError} />
 
       {/* Faceit автозагрузка */}
       <FaceitDemoFinder onAnalysis={setAnalysis} onLoading={setLoading} onError={setError} />
