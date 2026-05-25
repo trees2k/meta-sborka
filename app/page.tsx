@@ -276,6 +276,113 @@ function StatsSection() {
     </div>
   )
 }
+function FaceitDemoFinder({ onAnalysis, onLoading, onError }: {
+  onAnalysis: (a: any) => void
+  onLoading: (l: boolean) => void
+  onError: (e: string | null) => void
+}) {
+  const [nickname, setNickname] = useState('')
+  const [matches, setMatches] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+  const [downloading, setDownloading] = useState<string | null>(null)
+
+  const findMatches = async () => {
+    if (!nickname.trim()) return
+    setSearching(true)
+    onError(null)
+    try {
+      const res = await fetch(`/api/faceit?nickname=${encodeURIComponent(nickname)}`, {
+        method: 'PATCH'
+      })
+      const data = await res.json()
+      if (data.matches) setMatches(data.matches)
+      else onError(data.error || 'Игрок не найден')
+    } catch {
+      onError('Ошибка поиска')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const analyzeMatch = async (match: any) => {
+    if (!match.demo_url) {
+      onError('У этого матча нет демки')
+      return
+    }
+    setDownloading(match.match_id)
+    onLoading(true)
+    onError(null)
+    try {
+      const res = await fetch('/api/demo/auto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demo_url: match.demo_url, nickname }),
+      })
+      const data = await res.json()
+      if (data.status === 'ok') onAnalysis(data.analysis)
+      else onError(data.detail || data.error || 'Ошибка анализа')
+    } catch (e: any) {
+      onError(e.message)
+    } finally {
+      setDownloading(null)
+      onLoading(false)
+    }
+  }
+
+  return (
+    <div className="bg-gray-800/50 rounded-2xl p-6 space-y-4">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center">
+          <Zap size={16} className="text-orange-400" />
+        </div>
+        <div>
+          <h3 className="font-bold">Автозагрузка с Faceit</h3>
+          <p className="text-xs text-gray-400">Введи никнейм — найдём последние матчи</p>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={nickname}
+          onChange={e => setNickname(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && findMatches()}
+          placeholder="Твой Faceit никнейм"
+          className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+        />
+        <button
+          onClick={findMatches}
+          disabled={searching}
+          className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 rounded-xl text-sm font-semibold transition-all"
+        >
+          {searching ? '...' : 'Найти'}
+        </button>
+      </div>
+
+      {matches.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-400 font-semibold">Последние матчи:</p>
+          {matches.map((m: any) => (
+            <div key={m.match_id} className="flex items-center justify-between bg-gray-900/50 rounded-xl px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">{new Date(m.played_at * 1000).toLocaleDateString('ru-RU')}</p>
+                <p className="text-xs text-gray-500">{m.demo_url ? '✅ Демка доступна' : '❌ Демка недоступна'}</p>
+              </div>
+              <button
+                onClick={() => analyzeMatch(m)}
+                disabled={!m.demo_url || downloading === m.match_id}
+                className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 disabled:opacity-40 rounded-lg text-xs font-semibold transition-all"
+              >
+                {downloading === m.match_id ? '⏳ Загрузка...' : 'Разобрать'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AnalysisSection() {
   const [tab, setTab] = useState<'overview'|'rounds'|'errors'|'map'>('overview')
   const [openErr, setOpenErr] = useState<number|null>(0)
@@ -319,26 +426,42 @@ function AnalysisSection() {
   ] : []
 
   if (!analysis && !loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-black">Разбор ошибок</h2>
-          <p className="text-gray-400 mt-1">Загрузи демку — получишь детальный разбор с картой и советами</p>
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-black">Разбор ошибок</h2>
+        <p className="text-gray-400 mt-1">Загрузи демку или найди автоматически с Faceit</p>
+      </div>
+
+      {/* Faceit автозагрузка */}
+      <FaceitDemoFinder onAnalysis={setAnalysis} onLoading={setLoading} onError={setError} />
+
+      {/* Разделитель */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-gray-700"/>
+        <span className="text-gray-500 text-sm">или загрузи вручную</span>
+        <div className="flex-1 h-px bg-gray-700"/>
+      </div>
+
+      {/* Ручная загрузка */}
+      <label className="block bg-gray-800/50 border-2 border-dashed border-gray-600 hover:border-red-500/50 rounded-2xl p-8 text-center cursor-pointer transition-all group">
+        <input type="file" accept=".dem" className="hidden" onChange={handleFile} />
+        <Swords size={40} className="text-red-400 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+        <h3 className="text-lg font-bold mb-1">Загрузи .dem файл</h3>
+        <p className="text-gray-400 text-sm">Premier или Faceit · до 300 МБ</p>
+        <div className="mt-4 px-6 py-2 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl font-semibold inline-block text-sm">
+          Выбрать файл
         </div>
-        <label className="block bg-gray-800/50 border-2 border-dashed border-gray-600 hover:border-red-500/50 rounded-2xl p-12 text-center cursor-pointer transition-all group">
-          <input type="file" accept=".dem" className="hidden" onChange={handleFile} />
-          <Swords size={48} className="text-red-400 mx-auto mb-4 group-hover:scale-110 transition-transform" />
-          <h3 className="text-xl font-bold mb-2">Загрузи демку CS2</h3>
-          <p className="text-gray-400 text-sm">Файл .dem · Premier или Faceit</p>
-          <div className="mt-6 px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl font-semibold inline-block">
-            Выбрать файл
-          </div>
-        </label>
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-400 text-sm">
-            ⚠️ {error}
-          </div>
-        )}
+      </label>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-400 text-sm">
+          ⚠️ {error}
+        </div>
+      )}
+    </div>
+  )
+}
         <div className="bg-gray-800/50 rounded-2xl p-5 space-y-3">
           <p className="text-sm text-gray-400 font-semibold">Что получишь после анализа:</p>
           {[
@@ -352,9 +475,6 @@ function AnalysisSection() {
             </div>
           ))}
         </div>
-      </div>
-    )
-  }
 
   if (loading) {
     return (
