@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server'
+import { createGunzip } from 'zlib'
+import { Readable } from 'stream'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -13,14 +15,34 @@ export async function POST(request: Request) {
 
     const vpsUrl = process.env.VPS_URL || ''
 
-    // Скачиваем демку с Faceit CDN
-    const demoRes = await fetch(demo_url)
+    // Скачиваем демку
+    const demoRes = await fetch(demo_url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    })
+
     if (!demoRes.ok) {
-      return NextResponse.json({ error: 'Не удалось скачать демку' }, { status: 400 })
+      return NextResponse.json({ error: `Не удалось скачать демку: ${demoRes.status}` }, { status: 400 })
     }
 
-    const demoBuffer = await demoRes.arrayBuffer()
-    const demoBlob = new Blob([demoBuffer], { type: 'application/octet-stream' })
+    let demoBuffer: Buffer
+
+    // Если файл сжат (.gz) — распаковываем
+    if (demo_url.endsWith('.gz')) {
+      const compressed = Buffer.from(await demoRes.arrayBuffer())
+      demoBuffer = await new Promise((resolve, reject) => {
+        const gunzip = createGunzip()
+        const chunks: Buffer[] = []
+        const readable = Readable.from(compressed)
+        readable.pipe(gunzip)
+        gunzip.on('data', chunk => chunks.push(chunk))
+        gunzip.on('end', () => resolve(Buffer.concat(chunks)))
+        gunzip.on('error', reject)
+      })
+    } else {
+      demoBuffer = Buffer.from(await demoRes.arrayBuffer()) as Buffer
+    }
+
+    const demoBlob = new Blob([demoBuffer as unknown as ArrayBuffer], { type: 'application/octet-stream' })
 
     // Отправляем на VPS
     const form = new FormData()
