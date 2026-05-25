@@ -365,7 +365,9 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError }: {
           {matches.map((m: any) => (
             <div key={m.match_id} className="flex items-center justify-between bg-gray-900/50 rounded-xl px-4 py-3">
               <div>
-                <p className="text-sm font-medium">{new Date(m.played_at * 1000).toLocaleDateString('ru-RU')}</p>
+                <p className="text-sm font-medium">
+  {m.played_at ? new Date(m.played_at * 1000).toLocaleDateString('ru-RU') : 'Дата неизвестна'}
+</p>
                 <p className="text-xs text-gray-500">{m.demo_url ? '✅ Демка доступна' : '❌ Демка недоступна'}</p>
               </div>
               <button
