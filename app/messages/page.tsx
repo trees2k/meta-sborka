@@ -1,110 +1,89 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { Protected } from '@/lib/protected'
+import { TopBar } from '@/components/top-bar'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/lib/auth-context'
+import { MessageCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
-function MessagesContent() {
-  const searchParams = useSearchParams()
-  const toUser = searchParams.get('to') || ''
-  const [myNick, setMyNick] = useState('')
-  const [chatWith, setChatWith] = useState(toUser)
-  const [messages, setMessages] = useState<any[]>([])
-  const [text, setText] = useState('')
-  const [sent, setSent] = useState(false)
-
-  useEffect(() => {
-    const saved = localStorage.getItem('currentNickname')
-    if (saved) setMyNick(saved)
-    if (toUser) setChatWith(toUser)
-  }, [toUser])
-
-  useEffect(() => {
-    if (!myNick || !chatWith) return
-    fetch(`/api/messages?user1=${encodeURIComponent(myNick)}&user2=${encodeURIComponent(chatWith)}`)
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setMessages(data) })
-      .catch(() => {})
-  }, [myNick, chatWith, sent])
-
-  const handleSend = async () => {
-    if (!text.trim() || !myNick || !chatWith) return
-    await fetch('/api/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from_nickname: myNick, to_nickname: chatWith, text })
-    })
-    setText('')
-    setSent(!sent)
-  }
-
-  if (!myNick) {
-    return (
-      <main className="min-h-screen bg-gray-950 text-white p-6 text-center">
-        <h1 className="text-3xl font-bold mb-4">Сообщения</h1>
-        <p className="text-gray-400 mb-4">Сначала войди в кабинет, чтобы писать сообщения.</p>
-        <Link href="/cabinet" className="text-blue-400 hover:underline">Войти в кабинет</Link>
-      </main>
-    )
-  }
-
-  return (
-    <main className="min-h-screen bg-gray-950 text-white p-6">
-      <div className="max-w-2xl mx-auto">
-        <Link href="/" className="text-blue-400 hover:underline text-sm">← На главную</Link>
-        <h1 className="text-3xl font-bold mt-4 mb-2">Сообщения</h1>
-
-        {!chatWith ? (
-          <div className="mt-8">
-            <p className="text-gray-400 mb-4">С кем хочешь начать чат?</p>
-            <form onSubmit={e => { e.preventDefault(); const i = (e.target as any).nick; setChatWith(i.value) }}>
-              <div className="flex gap-2">
-                <input name="nick" type="text" placeholder="Никнейм игрока" className="flex-1 px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white" />
-                <button type="submit" className="px-4 py-2 bg-blue-500 rounded-xl font-semibold">Начать</button>
-              </div>
-            </form>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-2 mt-4 mb-6">
-              <p className="text-gray-400">Чат с</p>
-              <Link href={`/profile/${chatWith}`} className="text-blue-400 font-semibold hover:underline">{chatWith}</Link>
-              <button onClick={() => setChatWith('')} className="text-gray-500 text-sm ml-2 hover:text-white">✕</button>
-            </div>
-
-            <div className="bg-gray-800/30 rounded-2xl p-4 h-96 overflow-y-auto space-y-3 mb-4">
-              {messages.length === 0 && <p className="text-gray-500 text-center mt-20">Нет сообщений. Напиши первым!</p>}
-              {messages.map(m => (
-                <div key={m.id} className={`flex ${m.from_nickname === myNick ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[70%] px-4 py-2 rounded-xl text-sm ${m.from_nickname === myNick ? 'bg-blue-500' : 'bg-gray-700'}`}>
-                    {m.text}
-                    <p className="text-[10px] opacity-60 mt-1">{new Date(m.created_at).toLocaleTimeString().slice(0,5)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                value={text}
-                onChange={e => setText(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSend()}
-                placeholder="Сообщение..."
-                className="flex-1 px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white"
-              />
-              <button onClick={handleSend} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold">Отправить</button>
-            </div>
-          </>
-        )}
-      </div>
-    </main>
-  )
+interface Chat {
+  id: string
+  user1_id: string
+  user2_id: string
+  last_message_at: string
+  created_at: string
 }
 
-export default function Messages() {
+export default function MessagesPage() {
+  const { user } = useAuth()
+  const [chats, setChats] = useState<Chat[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (user) {
+      fetchChats()
+    }
+  }, [user])
+
+  const fetchChats = async () => {
+    try {
+      const res = await fetch('/api/chats')
+      const data = await res.json()
+      setChats(data.chats || [])
+    } catch (error) {
+      console.error('Error fetching chats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getOtherId = (chat: Chat) => {
+    return chat.user1_id === user?.id ? chat.user2_id : chat.user1_id
+  }
+
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">Загрузка...</div>}>
-      <MessagesContent />
-    </Suspense>
+    <Protected>
+      <TopBar />
+      <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white p-6">
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
+            <MessageCircle className="w-8 h-8" />
+            Мои чаты
+          </h1>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+          ) : chats.length === 0 ? (
+            <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-12 text-center">
+              <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+              <p className="text-gray-400">Нет активных чатов. Начни разговор с кем-то!</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {chats.map((chat) => (
+                <Link
+                  key={chat.id}
+                  href={`/profile/${getOtherId(chat)}`}
+                  className="block bg-gray-800/50 border border-gray-700 rounded-xl p-4 hover:bg-gray-800 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">Чат #{getOtherId(chat).slice(0, 8)}</p>
+                      <p className="text-gray-400 text-sm">
+                        Последнее сообщение: {new Date(chat.last_message_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <MessageCircle className="w-5 h-5 text-blue-400" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </Protected>
   )
 }

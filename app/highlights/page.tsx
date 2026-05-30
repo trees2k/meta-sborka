@@ -1,264 +1,173 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
-import { Heart, MessageCircle, Share2, ChevronUp, ChevronDown } from 'lucide-react'
-import Link from 'next/link'
+import { Protected } from '@/lib/protected'
+import { TopBar } from '@/components/top-bar'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/lib/auth-context'
+import { Star, Upload, Loader2 } from 'lucide-react'
 
-const mapColors: Record<string, string> = {
-  'de_mirage': 'from-amber-900 via-orange-950 to-yellow-950',
-  'de_dust2': 'from-yellow-900 via-amber-950 to-orange-950',
-  'de_inferno': 'from-red-900 via-rose-950 to-orange-950',
-  'de_nuke': 'from-slate-800 via-blue-950 to-cyan-950',
-  'de_ancient': 'from-emerald-900 via-green-950 to-teal-950',
-  'de_anubis': 'from-amber-900 via-yellow-950 to-stone-950',
-  'de_vertigo': 'from-sky-900 via-blue-950 to-indigo-950',
-  'de_overpass': 'from-green-900 via-emerald-950 to-lime-950',
+interface Highlight {
+  id: string
+  user_id: string
+  video_url: string
+  title: string
+  description: string
+  thumbnail_url: string
+  created_at: string
 }
 
 export default function HighlightsPage() {
-  const [highlights, setHighlights] = useState<any[]>([])
+  const { user } = useAuth()
+  const [highlights, setHighlights] = useState<Highlight[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
-  const [showComments, setShowComments] = useState(false)
-  const [comments, setComments] = useState<any[]>([])
-  const [commentText, setCommentText] = useState('')
-  const [heartAnim, setHeartAnim] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const lastTap = useRef(0)
-
-  const myNickname = typeof window !== 'undefined'
-    ? localStorage.getItem('currentNickname') || 'anonymous'
-    : 'anonymous'
+  const [uploading, setUploading] = useState(false)
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    video_url: '',
+    thumbnail_url: '',
+  })
 
   useEffect(() => {
-    fetch('/api/highlights/feed')
-      .then(r => r.json())
-      .then(data => setHighlights(data.highlights || []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+    if (user) {
+      fetchHighlights()
+    }
+  }, [user])
 
-  const handleLike = async (id: string) => {
-    const res = await fetch('/api/highlights/like', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ highlight_id: id, nickname: myNickname })
-    })
-    const data = await res.json()
-    if (data.liked) {
-      setLikedIds(prev => new Set([...prev, id]))
-      setHighlights(prev => prev.map(h => h.id === id ? { ...h, likes: (h.likes || 0) + 1 } : h))
-    } else {
-      setLikedIds(prev => { const n = new Set(prev); n.delete(id); return n })
-      setHighlights(prev => prev.map(h => h.id === id ? { ...h, likes: Math.max(0, (h.likes || 0) - 1) } : h))
+  const fetchHighlights = async () => {
+    try {
+      const res = await fetch(`/api/highlights?userId=${user?.id}`)
+      const data = await res.json()
+      setHighlights(data.highlights || [])
+    } catch (error) {
+      console.error('Error fetching highlights:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleDoubleTap = (id: string) => {
-    const now = Date.now()
-    if (now - lastTap.current < 300) {
-      if (!likedIds.has(id)) handleLike(id)
-      setHeartAnim(true)
-      setTimeout(() => setHeartAnim(false), 800)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    setUploading(true)
+    try {
+      const res = await fetch('/api/highlights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          ...formData,
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setHighlights([data.highlight, ...highlights])
+        setFormData({ title: '', description: '', video_url: '', thumbnail_url: '' })
+      }
+    } catch (error) {
+      console.error('Error uploading highlight:', error)
+    } finally {
+      setUploading(false)
     }
-    lastTap.current = now
   }
-
-  const loadComments = async (id: string) => {
-    const res = await fetch(`/api/highlights/comments?highlight_id=${id}`)
-    const data = await res.json()
-    setComments(data.comments || [])
-    setShowComments(true)
-  }
-
-  const sendComment = async () => {
-    if (!commentText.trim()) return
-    const h = highlights[currentIndex]
-    await fetch('/api/highlights/comments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ highlight_id: h.id, nickname: myNickname, text: commentText })
-    })
-    setCommentText('')
-    loadComments(h.id)
-    setHighlights(prev => prev.map(x => x.id === h.id ? { ...x, comments: (x.comments || 0) + 1 } : x))
-  }
-
-  const goTo = (dir: number) => {
-    setShowComments(false)
-    setCurrentIndex(prev => Math.max(0, Math.min(highlights.length - 1, prev + dir)))
-  }
-
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp') goTo(-1)
-      if (e.key === 'ArrowDown') goTo(1)
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [highlights.length])
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    let startY = 0
-    const onStart = (e: TouchEvent) => { startY = e.touches[0].clientY }
-    const onEnd = (e: TouchEvent) => {
-      const diff = startY - e.changedTouches[0].clientY
-      if (Math.abs(diff) > 50) goTo(diff > 0 ? 1 : -1)
-    }
-    el.addEventListener('touchstart', onStart)
-    el.addEventListener('touchend', onEnd)
-    return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchend', onEnd) }
-  }, [highlights.length])
-
-  if (loading) {
-    return <div className="h-screen bg-black text-white flex items-center justify-center">Загрузка хайлайтов...</div>
-  }
-
-  if (highlights.length === 0) {
-    return (
-      <div className="h-screen bg-black text-white flex flex-col items-center justify-center gap-4">
-        <p className="text-6xl">🎬</p>
-        <p className="text-xl font-bold">Пока нет хайлайтов</p>
-        <p className="text-gray-400">Загрузите демку в кабинете</p>
-        <Link href="/cabinet" className="px-6 py-3 bg-blue-500 rounded-xl font-semibold">Перейти в кабинет</Link>
-      </div>
-    )
-  }
-
-  const h = highlights[currentIndex]
-  const bgColor = mapColors[h.map] || 'from-gray-900 via-gray-950 to-black'
 
   return (
-    <div ref={containerRef} className="h-screen w-full overflow-hidden bg-black relative select-none">
-      <div
-        className={`h-full w-full flex flex-col items-center justify-center relative transition-all duration-300 ${!h.video_url ? `bg-gradient-to-b ${bgColor}` : 'bg-black'}`}
-        onClick={() => handleDoubleTap(h.id)}
-      >
-        {h.video_url && (
-          <video
-            key={h.video_url}
-            src={h.video_url}
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-contain z-0"
-          />
-        )}
+    <Protected>
+      <TopBar />
+      <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white p-6">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold mb-8">Мои хайлайты</h1>
 
-        {!h.video_url && (
-          <div className="text-center px-8 max-w-lg z-10">
-            <p className="text-8xl mb-4 drop-shadow-lg animate-bounce">{h.emoji}</p>
-            <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tight">{h.type}</h1>
-            <p className="text-lg text-white/80 mb-6">{h.description}</p>
-            <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-4 mb-4">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-2xl font-bold">{h.kills}</p>
-                  <p className="text-xs text-white/50">KILLS</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{h.deaths}</p>
-                  <p className="text-xs text-white/50">DEATHS</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-blue-400">{h.kd?.toFixed(2)}</p>
-                  <p className="text-xs text-white/50">K/D</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-white/60">
-              <span className="text-sm">🗺️ {h.map}</span>
-              {h.round_number && <span className="text-sm">· Раунд {h.round_number}</span>}
-            </div>
+          {/* Upload Form */}
+          <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-6 mb-8">
+            <h2 className="text-lg font-bold mb-4">Загрузить новый хайлайт</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Название"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <textarea
+                placeholder="Описание"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                rows={3}
+              />
+              <input
+                type="url"
+                placeholder="URL видео"
+                value={formData.video_url}
+                onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <input
+                type="url"
+                placeholder="URL миниатюры (превью)"
+                value={formData.thumbnail_url}
+                onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                disabled={uploading}
+                className="w-full py-2 bg-blue-500 hover:bg-blue-600 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Загрузка...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    Загрузить
+                  </>
+                )}
+              </button>
+            </form>
           </div>
-        )}
 
-        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10">
-          <Link href="/cabinet" className="text-white/70 hover:text-white text-sm">← Кабинет</Link>
-          <p className="text-white/50 text-sm">{currentIndex + 1} / {highlights.length}</p>
-        </div>
-
-        <div className="absolute bottom-24 left-4 z-10">
-          <Link href={`/profile/${h.nickname}`} className="flex items-center gap-2 hover:opacity-80">
-            <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-500 rounded-full flex items-center justify-center font-bold text-sm">
-              {h.nickname?.[0]?.toUpperCase()}
+          {/* Highlights Grid */}
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin" />
             </div>
-            <div>
-              <p className="font-semibold text-sm">{h.nickname}</p>
-              <p className="text-xs text-white/50">{new Date(h.created_at).toLocaleDateString('ru-RU')}</p>
+          ) : highlights.length === 0 ? (
+            <div className="bg-gray-800/50 border border-gray-700 rounded-2xl p-12 text-center">
+              <Star className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+              <p className="text-gray-400">Нет хайлайтов. Загрузи свой первый!</p>
             </div>
-          </Link>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {highlights.map((highlight) => (
+                <div key={highlight.id} className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-all">
+                  {highlight.thumbnail_url && (
+                    <img
+                      src={highlight.thumbnail_url}
+                      alt={highlight.title}
+                      className="w-full h-40 object-cover"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-bold truncate">{highlight.title}</h3>
+                    <p className="text-gray-400 text-sm line-clamp-2">{highlight.description}</p>
+                    <p className="text-gray-500 text-xs mt-2">
+                      {new Date(highlight.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-
-        <div className="absolute bottom-24 right-4 flex flex-col items-center gap-6 z-10">
-          <button onClick={(e) => { e.stopPropagation(); handleLike(h.id) }} className="flex flex-col items-center gap-1">
-            <Heart size={28} fill={likedIds.has(h.id) ? '#ef4444' : 'none'} className={likedIds.has(h.id) ? 'text-red-500' : 'text-white'} />
-            <span className="text-xs">{h.likes || 0}</span>
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); loadComments(h.id) }} className="flex flex-col items-center gap-1">
-            <MessageCircle size={28} />
-            <span className="text-xs">{h.comments || 0}</span>
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${window.location.origin}/highlights?id=${h.id}`) }} className="flex flex-col items-center gap-1">
-            <Share2 size={28} />
-            <span className="text-xs">Share</span>
-          </button>
-        </div>
-
-        {currentIndex > 0 && (
-          <button onClick={() => goTo(-1)} className="absolute top-1/2 -translate-y-12 left-1/2 -translate-x-1/2 opacity-30 hover:opacity-70 z-10">
-            <ChevronUp size={40} />
-          </button>
-        )}
-        {currentIndex < highlights.length - 1 && (
-          <button onClick={() => goTo(1)} className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-30 hover:opacity-70 animate-bounce z-10">
-            <ChevronDown size={40} />
-          </button>
-        )}
-
-        {heartAnim && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-            <Heart size={120} fill="#ef4444" className="text-red-500 animate-ping" />
-          </div>
-        )}
       </div>
-
-      {showComments && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur-md rounded-t-3xl p-4 z-30 max-h-[60vh] flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold">Комментарии</h3>
-            <button onClick={() => setShowComments(false)} className="text-gray-400">✕</button>
-          </div>
-          <div className="flex-1 overflow-y-auto space-y-3 mb-4">
-            {comments.length === 0 && <p className="text-gray-500 text-sm text-center">Нет комментариев</p>}
-            {comments.map((c, i) => (
-              <div key={i} className="flex gap-2">
-                <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                  {c.nickname?.[0]?.toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-sm"><span className="font-semibold">{c.nickname}</span> {c.text}</p>
-                  <p className="text-xs text-gray-500">{new Date(c.created_at).toLocaleDateString('ru-RU')}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendComment()}
-              placeholder="Написать комментарий..."
-              className="flex-1 px-4 py-2 bg-gray-800 rounded-xl text-sm"
-            />
-            <button onClick={sendComment} className="px-4 py-2 bg-blue-500 rounded-xl text-sm font-semibold">→</button>
-          </div>
-        </div>
-      )}
-    </div>
+    </Protected>
   )
 }
