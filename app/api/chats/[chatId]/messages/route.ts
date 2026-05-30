@@ -6,9 +6,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export async function GET(request: Request, { params }: { params: { chatId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ chatId: string }> }) {
   try {
-    const { chatId } = params
+    const { chatId } = await params
 
     const { data: messages, error } = await supabase
       .from('messages')
@@ -25,9 +25,9 @@ export async function GET(request: Request, { params }: { params: { chatId: stri
   }
 }
 
-export async function POST(request: Request, { params }: { params: { chatId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ chatId: string }> }) {
   try {
-    const { chatId } = params
+    const { chatId } = await params
     const body = await request.json()
 
     const { data: message, error } = await supabase
@@ -38,7 +38,6 @@ export async function POST(request: Request, { params }: { params: { chatId: str
 
     if (error) throw error
 
-    // Update last_message_at in chats table
     await supabase
       .from('chats')
       .update({ last_message_at: new Date().toISOString() })
