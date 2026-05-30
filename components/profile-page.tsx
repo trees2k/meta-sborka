@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
-import { MessageCircle, UserPlus, MoreVertical, Heart, MessageDot, Users } from 'lucide-react'
+import { MessageCircle, UserPlus, MoreVertical, Heart, Users } from 'lucide-react'
 import ChatSidebar from './chat-sidebar'
 
 interface PlayerProfile {
@@ -218,7 +218,7 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
                       1.2K
                     </div>
                     <div className="flex items-center gap-1 text-gray-400">
-                      <MessageDot className="w-4 h-4" />
+                      <MessageCircle className="w-4 h-4" />
                       42
                     </div>
                   </div>

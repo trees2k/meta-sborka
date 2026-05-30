@@ -21,7 +21,7 @@ async function getUserIdFromRequest(request: Request) {
   }
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
+export async function GET(request: Request) {
   const currentUserId = await getUserIdFromRequest(request)
   if (!currentUserId) {
     return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })

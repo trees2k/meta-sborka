@@ -5,19 +5,21 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-/**
- * Миграция для создания всех необходимых таблиц
- * Запусти это один раз при развёртывании
- */
+async function safeRpc(fn: string, args: object = {}) {
+  try {
+    await (supabase.rpc as any)(fn, args)
+  } catch {
+    // ignore
+  }
+}
+
 export async function runMigrations() {
   try {
-    // 1. Таблица пользователей (если ещё нет)
-    await supabase.rpc('create_users_table', {}, { head: true }).catch(() => null)
+    await safeRpc('create_users_table', {})
 
-    // 2. Таблица анкет игроков
     const { error: profileError } = await supabase.from('player_profiles').select('id').limit(1)
     if (profileError?.code === 'PGRST116') {
-      await supabase.rpc('exec_sql', {
+      await safeRpc('exec_sql', {
         sql: `
           CREATE TABLE IF NOT EXISTS player_profiles (
             id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -33,13 +35,12 @@ export async function runMigrations() {
             updated_at TIMESTAMP DEFAULT NOW()
           )
         `
-      }).catch(() => null)
+      })
     }
 
-    // 3. Таблица хайлайтов
     const { error: highlightError } = await supabase.from('highlights').select('id').limit(1)
     if (highlightError?.code === 'PGRST116') {
-      await supabase.rpc('exec_sql', {
+      await safeRpc('exec_sql', {
         sql: `
           CREATE TABLE IF NOT EXISTS highlights (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -53,13 +54,12 @@ export async function runMigrations() {
             UNIQUE(user_id, demo_id)
           )
         `
-      }).catch(() => null)
+      })
     }
 
-    // 4. Таблица чатов
     const { error: chatError } = await supabase.from('chats').select('id').limit(1)
     if (chatError?.code === 'PGRST116') {
-      await supabase.rpc('exec_sql', {
+      await safeRpc('exec_sql', {
         sql: `
           CREATE TABLE IF NOT EXISTS chats (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -71,13 +71,12 @@ export async function runMigrations() {
             CHECK (user1_id < user2_id)
           )
         `
-      }).catch(() => null)
+      })
     }
 
-    // 5. Таблица сообщений
     const { error: messageError } = await supabase.from('messages').select('id').limit(1)
     if (messageError?.code === 'PGRST116') {
-      await supabase.rpc('exec_sql', {
+      await safeRpc('exec_sql', {
         sql: `
           CREATE TABLE IF NOT EXISTS messages (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -91,7 +90,7 @@ export async function runMigrations() {
           CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id);
           CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
         `
-      }).catch(() => null)
+      })
     }
 
     console.log('✅ Миграции завершены')
