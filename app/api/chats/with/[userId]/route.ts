@@ -21,20 +21,18 @@ async function getUserIdFromRequest(request: Request) {
   }
 }
 
-export async function GET(request: Request, { params }: { params: { userId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   const currentUserId = await getUserIdFromRequest(request)
   if (!currentUserId) {
     return NextResponse.json({ error: 'Не авторизован' }, { status: 401 })
   }
 
-  const { userId: targetUserId } = params
+  const { userId: targetUserId } = await params
 
   try {
-    // Найти существующий чат или создать новый
     let user1 = currentUserId
     let user2 = targetUserId
 
-    // Упорядочиваем ID для консистентности
     if (user1 > user2) {
       [user1, user2] = [user2, user1]
     }

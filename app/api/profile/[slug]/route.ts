@@ -8,9 +8,9 @@ const supabase = createClient(
 
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const nickname = params.slug
+  const { slug: nickname } = await params
 
   try {
     const { data: user, error } = await supabase
@@ -38,9 +38,9 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const nickname = params.slug
+  const { slug: nickname } = await params
   const body = await request.json()
 
   try {
