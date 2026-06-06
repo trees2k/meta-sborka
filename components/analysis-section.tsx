@@ -2,12 +2,11 @@
 
 import { useState } from 'react'
 import {
-  Swords, TrendingUp, Zap, Download, Upload,
+  Swords, Zap, Upload,
   CheckCircle, Circle, ExternalLink, ChevronDown,
   AlertCircle, Play, BarChart3
 } from 'lucide-react'
 
-// ─── Faceit Demo Finder (обновлённый) ────────────────────────────────────────
 function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
   onAnalysis: (a: any) => void
   onLoading: (l: boolean) => void
@@ -45,15 +44,21 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
     setStep(3)
   }
 
-  const handleDemFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const file = e.dataTransfer.files?.[0]
+    if (file) onFileReady(file)
+  }
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
-    onFileReady(file)
+    if (file) onFileReady(file)
   }
 
   return (
     <div className="space-y-4">
-      {/* Шаг 1 — Найти матчи */}
+      {/* Шаг 1 */}
       <div className={`rounded-2xl overflow-hidden border transition-all ${step >= 1 ? 'border-orange-500/30 bg-orange-500/5' : 'border-gray-700/50 bg-gray-800/30'}`}>
         <div className="p-5">
           <div className="flex items-center gap-3 mb-4">
@@ -65,7 +70,6 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
               <p className="text-xs text-gray-400">Введи никнейм — покажем последние 5 матчей</p>
             </div>
           </div>
-
           <div className="flex gap-2">
             <input
               type="text"
@@ -83,8 +87,6 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
               {searching ? '...' : 'Найти'}
             </button>
           </div>
-
-          {/* Список матчей */}
           {matches.length > 0 && (
             <div className="mt-4 space-y-2">
               <p className="text-xs text-gray-400 font-semibold mb-2">Выбери матч для разбора:</p>
@@ -119,27 +121,26 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
         </div>
       </div>
 
-      {/* Шаг 2 — Скачать демку */}
+      {/* Шаг 2 */}
       {selectedMatch && (
         <div className="rounded-2xl overflow-hidden border border-blue-500/30 bg-blue-500/5 p-5">
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${step > 2 ? 'bg-emerald-500 text-white' : 'bg-blue-500 text-white'}`}>
-              {step > 2 ? '✓' : '2'}
+            <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+              2
             </div>
             <div>
               <p className="font-bold text-sm">Скачай демку с Faceit</p>
               <p className="text-xs text-gray-400">Откроется страница матча — нажми кнопку скачать</p>
             </div>
           </div>
-
-          {/* Инструкция */}
           <div className="bg-gray-900/60 rounded-xl p-4 mb-4 space-y-3">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Как скачать:</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Инструкция:</p>
             {[
               { step: 'Нажми кнопку ниже — откроется страница матча на Faceit', icon: '🔗' },
               { step: 'На странице матча найди кнопку "Download Demo" (справа вверху)', icon: '⬇️' },
-              { step: 'Скачается файл .dem.zst — не переименовывай его', icon: '📁' },
-              { step: 'Вернись сюда и загрузи файл в шаге 3', icon: '⬆️' },
+              { step: 'Файл скачается в папку Загрузки — найди его там (не перетаскивай прямо с сайта Faceit!)', icon: '📁' },
+              { step: 'Перетащи файл .dem.zst из папки Загрузки на Рабочий стол', icon: '🖥️' },
+              { step: 'Вернись сюда, в шаге 3 нажми "Выбрать файл" или перетащи с Рабочего стола', icon: '⬆️' },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-3 text-sm text-gray-300">
                 <span className="text-base flex-shrink-0">{item.icon}</span>
@@ -147,7 +148,6 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
               </div>
             ))}
           </div>
-
           <a
             href={`https://www.faceit.com/en/cs2/room/${selectedMatch.match_id}`}
             target="_blank"
@@ -160,7 +160,7 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
         </div>
       )}
 
-      {/* Шаг 3 — Загрузить файл */}
+      {/* Шаг 3 */}
       {selectedMatch && (
         <div className="rounded-2xl overflow-hidden border border-emerald-500/30 bg-emerald-500/5 p-5">
           <div className="flex items-center gap-3 mb-4">
@@ -169,23 +169,32 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
             </div>
             <div>
               <p className="font-bold text-sm">Загрузи скачанный файл</p>
-              <p className="text-xs text-gray-400">Перетащи .dem или .dem.zst файл сюда</p>
+              <p className="text-xs text-gray-400">Перетащи файл с Рабочего стола или нажми "Выбрать файл"</p>
             </div>
           </div>
-
-          <label className="block border-2 border-dashed border-emerald-500/40 hover:border-emerald-500/70 rounded-xl p-6 text-center cursor-pointer transition-all group">
-            <input type="file" accept=".dem,.zst" className="hidden" onChange={handleDemFile} />
+          <div
+            className="border-2 border-dashed border-emerald-500/40 hover:border-emerald-500/70 rounded-xl p-6 text-center cursor-pointer transition-all group"
+            onDragOver={e => { e.preventDefault(); e.stopPropagation() }}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById('demo-file-faceit')?.click()}
+          >
+            <input
+              id="demo-file-faceit"
+              type="file"
+              accept=".dem,.zst"
+              className="hidden"
+              onChange={handleFileInput}
+            />
             <Upload size={32} className="text-emerald-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <p className="font-semibold text-sm">Выбери или перетащи файл</p>
-            <p className="text-xs text-gray-500 mt-1">.dem или .dem.zst · до 500 МБ</p>
-          </label>
+            <p className="font-semibold text-sm">Перетащи файл с Рабочего стола сюда</p>
+            <p className="text-xs text-gray-500 mt-1">или нажми чтобы выбрать · .dem или .dem.zst · до 500 МБ</p>
+          </div>
         </div>
       )}
     </div>
   )
 }
 
-// ─── Главный компонент AnalysisSection ────────────────────────────────────────
 export function AnalysisSection() {
   const [tab, setTab] = useState<'overview' | 'rounds' | 'errors' | 'map'>('overview')
   const [openErr, setOpenErr] = useState<number | null>(0)
@@ -219,8 +228,15 @@ export function AnalysisSection() {
     }
   }
 
-  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    if (file) handleFile(file)
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const file = e.dataTransfer.files?.[0]
     if (file) handleFile(file)
   }
 
@@ -232,7 +248,6 @@ export function AnalysisSection() {
     { label: 'KAST', you: `${analysis.stats.kast}%`, pro: '73%', youW: analysis.stats.kast, proW: 73, good: analysis.stats.kast >= 73 },
   ] : []
 
-  // ─── Загрузка ───
   if (loading) {
     return (
       <div className="space-y-6">
@@ -252,7 +267,6 @@ export function AnalysisSection() {
     )
   }
 
-  // ─── Выбор метода ───
   if (!analysis) {
     return (
       <div className="space-y-6">
@@ -261,7 +275,6 @@ export function AnalysisSection() {
           <p className="text-gray-400 mt-1">Загрузи демку и получи детальный анализ + хайлайты</p>
         </div>
 
-        {/* Что получишь */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { icon: BarChart3, label: 'Статистика', desc: 'K/D, ADR, KAST, HS%', color: 'text-blue-400', bg: 'bg-blue-500/10' },
@@ -277,7 +290,6 @@ export function AnalysisSection() {
           ))}
         </div>
 
-        {/* Выбор способа */}
         {!method && (
           <div className="grid md:grid-cols-2 gap-4">
             <button
@@ -310,7 +322,6 @@ export function AnalysisSection() {
           </div>
         )}
 
-        {/* Faceit flow */}
         {method === 'faceit' && (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -326,21 +337,18 @@ export function AnalysisSection() {
           </div>
         )}
 
-        {/* Manual flow */}
         {method === 'manual' && (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <button onClick={() => setMethod(null)} className="text-gray-500 hover:text-white text-sm transition-colors">← Назад</button>
               <h3 className="font-bold">Загрузка файла</h3>
             </div>
-
-            {/* Инструкция для ручной загрузки */}
             <div className="bg-gray-800/50 rounded-2xl p-5 space-y-3">
               <p className="text-sm font-semibold text-gray-400">Где найти .dem файл:</p>
               <div className="space-y-2">
                 {[
-                  { platform: 'Faceit', steps: 'faceit.com → Match Room → Download Demo', icon: '🟠' },
-                  { platform: 'CS2 Premier', steps: 'CS2 → Смотреть → Скачать демо', icon: '🔵' },
+                  { platform: 'Faceit', steps: 'faceit.com → Match Room → Download Demo → файл в папке Загрузки', icon: '🟠' },
+                  { platform: 'CS2 Premier', steps: 'CS2 → Смотреть → Скачать демо → файл в папке с игрой', icon: '🔵' },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-3 bg-gray-900/50 rounded-xl p-3">
                     <span className="text-lg">{item.icon}</span>
@@ -351,17 +359,31 @@ export function AnalysisSection() {
                   </div>
                 ))}
               </div>
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
+                <p className="text-xs text-yellow-400">⚠️ Не перетаскивай файл прямо с сайта Faceit — он скачается заново. Сначала скачай в папку Загрузки, потом перетащи отсюда на сайт.</p>
+              </div>
             </div>
 
-            <label className="block bg-gray-800/50 border-2 border-dashed border-gray-600 hover:border-red-500/50 rounded-2xl p-10 text-center cursor-pointer transition-all group">
-              <input type="file" accept=".dem,.zst" className="hidden" onChange={handleFileInput} />
+            <div
+              className="bg-gray-800/50 border-2 border-dashed border-gray-600 hover:border-red-500/50 rounded-2xl p-10 text-center cursor-pointer transition-all group"
+              onDragOver={e => { e.preventDefault(); e.stopPropagation() }}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('demo-file-manual')?.click()}
+            >
+              <input
+                id="demo-file-manual"
+                type="file"
+                accept=".dem,.zst"
+                className="hidden"
+                onChange={handleFileInput}
+              />
               <Swords size={48} className="text-red-400 mx-auto mb-4 group-hover:scale-110 transition-transform" />
-              <h3 className="text-xl font-bold mb-2">Перетащи или выбери файл</h3>
-              <p className="text-gray-400 text-sm mb-5">.dem или .dem.zst · Premier или Faceit · до 500 МБ</p>
+              <h3 className="text-xl font-bold mb-2">Перетащи файл с Рабочего стола сюда</h3>
+              <p className="text-gray-400 text-sm mb-5">или нажми чтобы выбрать · .dem или .dem.zst · до 500 МБ</p>
               <div className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl font-semibold inline-block text-sm">
                 Выбрать файл
               </div>
-            </label>
+            </div>
           </div>
         )}
 
@@ -375,7 +397,6 @@ export function AnalysisSection() {
     )
   }
 
-  // ─── Результат анализа ───
   const s = analysis.stats
   const errors = analysis.errors || []
   const rounds = analysis.rounds || []
@@ -401,10 +422,13 @@ export function AnalysisSection() {
               {errors.length} ошибок
             </span>
           )}
-          <label className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm cursor-pointer transition-all">
-            <input type="file" accept=".dem,.zst" className="hidden" onChange={handleFileInput} />
+          <div
+            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm cursor-pointer transition-all"
+            onClick={() => document.getElementById('demo-file-new')?.click()}
+          >
+            <input id="demo-file-new" type="file" accept=".dem,.zst" className="hidden" onChange={handleFileInput} />
             Новая демка
-          </label>
+          </div>
         </div>
       </div>
 
@@ -424,7 +448,6 @@ export function AnalysisSection() {
         ))}
       </div>
 
-      {/* ОБЗОР */}
       {tab === 'overview' && (
         <div className="space-y-4">
           <div className="bg-gray-800/50 rounded-2xl p-6">
@@ -472,7 +495,6 @@ export function AnalysisSection() {
         </div>
       )}
 
-      {/* ПО РАУНДАМ */}
       {tab === 'rounds' && (
         <div className="bg-gray-800/50 rounded-2xl divide-y divide-gray-700/50">
           {rounds.length === 0 && (
@@ -490,7 +512,6 @@ export function AnalysisSection() {
         </div>
       )}
 
-      {/* ОШИБКИ */}
       {tab === 'errors' && (
         <div className="space-y-3">
           {errors.length === 0 && (
@@ -532,7 +553,6 @@ export function AnalysisSection() {
         </div>
       )}
 
-      {/* КАРТА */}
       {tab === 'map' && (
         <div className="space-y-4">
           <div className="bg-gray-900 rounded-2xl p-4">
