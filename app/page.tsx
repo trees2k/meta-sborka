@@ -257,6 +257,7 @@ function StatsSection() {
 const sections: Record<string, () => React.ReactNode> = {
   info: InfoSection,
   updates: UpdatesSection,
+  team: TeamSection,
   warmup: WarmupSection,
   lineups: LineupsSection,
   training: TrainingSection,
