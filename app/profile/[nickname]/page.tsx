@@ -163,35 +163,27 @@ function HighlightCard({ highlight, isOwner }: { highlight: any; isOwner: boolea
 function DirectModal({ targetNickname, onClose }: { targetNickname: string; onClose: () => void }) {
   const [messages, setMessages] = useState<any[]>([])
   const [text, setText] = useState('')
-  const [chatId, setChatId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/chats/with/${targetNickname}`)
+    fetch(`/api/messages/direct?with=${encodeURIComponent(targetNickname)}`)
       .then(r => r.json())
-      .then(async data => {
-        if (data.chat) {
-          setChatId(data.chat.id)
-          const msgRes = await fetch(`/api/chats/${data.chat.id}/messages`)
-          const msgData = await msgRes.json()
-          if (msgData?.messages) setMessages(msgData.messages)
-        }
-      })
+      .then(data => { if (data.messages) setMessages(data.messages) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [targetNickname])
 
   const sendMessage = async () => {
-    if (!text.trim() || !chatId) return
-    const res = await fetch(`/api/chats/${chatId}/messages`, {
+    if (!text.trim()) return
+    const res = await fetch('/api/messages/direct', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: text })
+      body: JSON.stringify({ to_nickname: targetNickname, content: text })
     })
     if (res.ok) {
       const data = await res.json()
       setText('')
-      setMessages(prev => [...prev, { ...data.message, is_mine: true }])
+      setMessages(prev => [...prev, data.message])
     }
   }
 
