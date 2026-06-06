@@ -82,8 +82,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
     }
  
     return NextResponse.json({ chat })
-  } catch (error) {
-  console.error('GET /api/chats/with error:', error)
-  return NextResponse.json({ error: String(error) }, { status: 500 })
-}
+  } catch (error: any) {
+    console.error('GET /api/chats/with error:', JSON.stringify(error))
+    return NextResponse.json({ 
+      error: error?.message || error?.details || JSON.stringify(error)
+    }, { status: 500 })
+  }
 }
