@@ -1,5 +1,6 @@
 'use client'
 
+import { TeamSection } from '@/components/team-section'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
@@ -110,23 +111,6 @@ function UpdatesSection() {
             <p className="text-gray-400 text-sm mt-1">{u.desc}</p>
           </div>
         ))}
-      </div>
-    </div>
-  )
-}
-
-function TeamSection() {
-  return (
-    <div className="space-y-6">
-      <h2 className="text-3xl font-black">Подбор команды</h2>
-      <p className="text-gray-400">Найди тиммейтов для CS2</p>
-      <div className="bg-gray-800/50 rounded-2xl p-8 text-center">
-        <Users size={64} className="text-green-400 mx-auto mb-4" />
-        <h3 className="text-xl font-bold mb-2">Заполни анкету</h3>
-        <p className="text-gray-400 mb-6">Укажи свой ранг, роли, время игры — и мы подберём идеальных тиммейтов</p>
-        <Link href="/anketa" className="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-xl font-semibold inline-block transition-all">
-          Заполнить анкету
-        </Link>
       </div>
     </div>
   )
@@ -273,7 +257,6 @@ function StatsSection() {
 const sections: Record<string, () => React.ReactNode> = {
   info: InfoSection,
   updates: UpdatesSection,
-  team: TeamSection,
   warmup: WarmupSection,
   lineups: LineupsSection,
   training: TrainingSection,
