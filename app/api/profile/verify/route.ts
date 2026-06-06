@@ -5,10 +5,10 @@ const FACEIT_API_BASE = 'https://open.faceit.com/data/v4'
 
 export async function POST(request: Request) {
   try {
-    const { nickname, code } = await request.json()
+    const { nickname, steamId } = await request.json()
 
-    if (!nickname || !code) {
-      return NextResponse.json({ error: 'Никнейм и код обязательны' }, { status: 400 })
+    if (!nickname || !steamId) {
+      return NextResponse.json({ error: 'Никнейм и Steam ID обязательны' }, { status: 400 })
     }
 
     const res = await fetch(`${FACEIT_API_BASE}/players?nickname=${encodeURIComponent(nickname)}`, {
@@ -24,16 +24,20 @@ export async function POST(request: Request) {
 
     const player = await res.json()
 
-    // Возвращаем все поля для отладки
-    return NextResponse.json({ 
-      debug: true,
-      fields: Object.keys(player),
-      about: player.about,
-      description: player.description,
-      membership: player.membership,
-      faceit_url: player.faceit_url,
-      cover_image: player.cover_image,
-    })
+    const faceitSteamId = player.steam_id_64 || player.new_steam_id || ''
+
+    if (!faceitSteamId) {
+      return NextResponse.json({ error: 'У этого Faceit аккаунта не привязан Steam' }, { status: 400 })
+    }
+
+    const inputSteamId = steamId.trim().replace(/\s/g, '')
+    if (faceitSteamId === inputSteamId) {
+      return NextResponse.json({ ok: true })
+    }
+
+    return NextResponse.json({
+      error: `Steam ID не совпадает. Убедись что вводишь правильный Steam ID64 (17 цифр)`
+    }, { status: 400 })
 
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

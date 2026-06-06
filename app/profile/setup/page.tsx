@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle, AlertCircle, Loader, Shield, ExternalLink, ArrowLeft, Copy, RefreshCw } from 'lucide-react'
+import { CheckCircle, AlertCircle, Loader, Shield, ExternalLink, ArrowLeft } from 'lucide-react'
 
 export default function SetupPage() {
   const [nickname, setNickname] = useState('')
@@ -13,10 +13,9 @@ export default function SetupPage() {
   const [checking, setChecking] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [faceitData, setFaceitData] = useState<any>(null)
-  const [verifyCode, setVerifyCode] = useState('')
+  const [steamId, setSteamId] = useState('')
   const [verified, setVerified] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const router = useRouter()
 
@@ -28,11 +27,6 @@ export default function SetupPage() {
           setCurrentNickname(data.user.faceit_nickname)
           setNickname(data.user.faceit_nickname)
           if (data.user.faceit_verified) setVerified(true)
-        }
-        // Генерируем уникальный код на основе user id
-        if (data.user?.id) {
-          const code = `UFUTURE-${data.user.id.slice(0, 6).toUpperCase()}`
-          setVerifyCode(code)
         }
       })
       .finally(() => setPageLoading(false))
@@ -60,12 +54,6 @@ export default function SetupPage() {
     }
   }
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(verifyCode)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   const verifyNickname = async () => {
     setVerifying(true)
     setError('')
@@ -73,14 +61,14 @@ export default function SetupPage() {
       const res = await fetch('/api/profile/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname, code: verifyCode })
+        body: JSON.stringify({ nickname, steamId })
       })
       const data = await res.json()
       if (data.ok) {
         setVerified(true)
         setStep(3)
       } else {
-        setError(data.error || 'Код не найден в описании профиля')
+        setError(data.error || 'Steam ID не совпадает')
       }
     } catch {
       setError('Ошибка проверки')
@@ -148,8 +136,8 @@ export default function SetupPage() {
           ))}
         </div>
 
-        {/* Шаг 1 — Найти аккаунт */}
-        <div className={`rounded-2xl border p-5 transition-all ${step >= 1 ? 'border-blue-500/30 bg-blue-500/5' : 'border-gray-700/50 bg-gray-800/30'}`}>
+        {/* Шаг 1 */}
+        <div className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${step > 1 ? 'bg-emerald-500 text-white' : 'bg-blue-500 text-white'}`}>
               {step > 1 ? '✓' : '1'}
@@ -194,77 +182,70 @@ export default function SetupPage() {
           )}
         </div>
 
-        {/* Шаг 2 — Верификация */}
+        {/* Шаг 2 — Верификация через Steam */}
         {step >= 2 && (
-          <div className={`rounded-2xl border p-5 transition-all ${step >= 2 ? 'border-orange-500/30 bg-orange-500/5' : 'border-gray-700/50 bg-gray-800/30'}`}>
+          <div className="rounded-2xl border border-orange-500/30 bg-orange-500/5 p-5">
             <div className="flex items-center gap-3 mb-4">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${step > 2 ? 'bg-emerald-500 text-white' : 'bg-orange-500 text-white'}`}>
                 {step > 2 ? '✓' : '2'}
               </div>
               <div>
-                <p className="font-bold text-sm">Подтверди что это твой аккаунт</p>
-                <p className="text-xs text-gray-400">Добавь код в описание профиля на Faceit</p>
+                <p className="font-bold text-sm">Подтверди через Steam ID</p>
+                <p className="text-xs text-gray-400">Введи свой Steam ID64 — сравним с Faceit профилем</p>
               </div>
             </div>
 
-            {/* Инструкция */}
             <div className="bg-gray-900/60 rounded-xl p-4 mb-4 space-y-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Инструкция:</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Как найти Steam ID64:</p>
               {[
-                { step: 'Скопируй свой уникальный код ниже', icon: '📋' },
-                { step: 'Открой свой профиль на Faceit (кнопка ниже)', icon: '🔗' },
-                { step: 'Нажми Edit Profile → добавь код в поле "About me"', icon: '✏️' },
-                { step: 'Сохрани профиль и нажми "Проверить код"', icon: '✅' },
+                { text: 'Открой Steam → нажми на свой ник вверху → Профиль', icon: '1️⃣' },
+                { text: 'В адресной строке скопируй цифры после /profiles/ (17 цифр)', icon: '2️⃣' },
+                { text: 'Или зайди на steamid.io и введи свой ник', icon: '3️⃣' },
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-3 text-sm text-gray-300">
                   <span className="text-base flex-shrink-0">{item.icon}</span>
-                  <span>{item.step}</span>
+                  <span>{item.text}</span>
                 </div>
               ))}
             </div>
 
-            {/* Код */}
-            <div className="bg-gray-900 rounded-xl p-4 mb-4">
-              <p className="text-xs text-gray-500 mb-2">Твой уникальный код:</p>
-              <div className="flex items-center gap-3">
-                <code className="flex-1 text-lg font-black text-blue-400 tracking-widest">{verifyCode}</code>
-                <button
-                  onClick={copyCode}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${copied ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}
-                >
-                  {copied ? <><CheckCircle size={12} /> Скопировано</> : <><Copy size={12} /> Копировать</>}
-                </button>
-              </div>
-            </div>
-
             <div className="flex gap-2 mb-3">
-              <a
-                href={`https://www.faceit.com/en/players/${nickname}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors"
-              >
-                <ExternalLink size={14} /> Открыть профиль
-              </a>
+              <input
+                type="text"
+                value={steamId}
+                onChange={e => { setSteamId(e.target.value); setError('') }}
+                onKeyDown={e => e.key === 'Enter' && verifyNickname()}
+                placeholder="76561198XXXXXXXXX"
+                className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors text-sm font-mono"
+              />
               <button
                 onClick={verifyNickname}
-                disabled={verifying}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 rounded-xl text-sm font-semibold transition-colors"
+                disabled={verifying || !steamId.trim()}
+                className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 rounded-xl text-sm font-semibold transition-colors"
               >
-                {verifying ? <><Loader size={14} className="animate-spin" /> Проверяем...</> : <><RefreshCw size={14} /> Проверить код</>}
+                {verifying ? <Loader size={16} className="animate-spin" /> : 'Проверить'}
               </button>
             </div>
 
+            <a
+              href="https://steamid.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              <ExternalLink size={10} /> Найти свой Steam ID на steamid.io
+            </a>
+
             {verified && (
-              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+              <div className="mt-3 flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
                 <CheckCircle size={16} className="text-emerald-400 flex-shrink-0" />
-                <p className="text-sm text-emerald-300 font-semibold">Код найден — аккаунт подтверждён!</p>
+                <p className="text-sm text-emerald-300 font-semibold">Steam ID совпадает — аккаунт подтверждён!</p>
               </div>
             )}
           </div>
         )}
 
-        {/* Шаг 3 — Сохранить */}
+        {/* Шаг 3 */}
         {step >= 3 && verified && (
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
             <div className="flex items-center gap-3 mb-4">
@@ -280,7 +261,7 @@ export default function SetupPage() {
             <div className="flex items-center gap-3 bg-gray-900/50 rounded-xl p-3 mb-4">
               <Shield size={16} className="text-emerald-400 flex-shrink-0" />
               <p className="text-xs text-gray-300">
-                Никнейм <strong className="text-white">{nickname}</strong> верифицирован и будет привязан только к твоему аккаунту
+                Никнейм <strong className="text-white">{nickname}</strong> верифицирован и привязан к твоему аккаунту
               </p>
             </div>
 
