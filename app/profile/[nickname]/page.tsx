@@ -11,7 +11,6 @@ import {
   BarChart3, Zap, Shield, TrendingUp, X, Menu
 } from 'lucide-react'
 
-// ─── Sidebar (same as main) ──────────────────────────────────────────────────
 function Sidebar({ nickname, sidebarOpen, setSidebarOpen }: {
   nickname: string
   sidebarOpen: boolean
@@ -36,26 +35,20 @@ function Sidebar({ nickname, sidebarOpen, setSidebarOpen }: {
           </Link>
           <p className="text-xs text-gray-500 mt-1">Киберспортивная платформа</p>
         </div>
-
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {[
-            { href: '/', label: 'Главная', icon: BarChart3, color: 'from-blue-500 to-cyan-500' },
-            { href: '/highlights', label: 'Хайлайты', icon: Play, color: 'from-pink-500 to-purple-500' },
-            { href: '/cabinet', label: 'Кабинет', icon: Trophy, color: 'from-green-500 to-emerald-500' },
-            { href: '/anketa', label: 'Найти команду', icon: Users, color: 'from-orange-500 to-red-500' },
+            { href: '/', label: 'Главная', icon: BarChart3 },
+            { href: '/highlights', label: 'Хайлайты', icon: Play },
+            { href: '/cabinet', label: 'Кабинет', icon: Trophy },
+            { href: '/anketa', label: 'Найти команду', icon: Users },
           ].map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setSidebarOpen(false)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all"
-            >
+            <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all">
               <item.icon size={20} />
               <span className="font-medium">{item.label}</span>
             </Link>
           ))}
         </nav>
-
         <div className="p-4 border-t border-gray-800/50">
           {nickname && (
             <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-3 bg-gray-800/50 rounded-xl">
@@ -74,7 +67,6 @@ function Sidebar({ nickname, sidebarOpen, setSidebarOpen }: {
   )
 }
 
-// ─── Highlight Card ───────────────────────────────────────────────────────────
 function HighlightCard({ highlight, isOwner }: { highlight: any; isOwner: boolean }) {
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
@@ -124,27 +116,19 @@ function HighlightCard({ highlight, isOwner }: { highlight: any; isOwner: boolea
     <div className="bg-gray-800/50 rounded-2xl overflow-hidden hover:bg-gray-800/80 transition-all group">
       <div className="relative aspect-video overflow-hidden">
         <video src={highlight.video_url} controls className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
       <div className="p-4">
         <p className="font-semibold text-sm mb-3">{highlight.title || 'Без названия'}</p>
         <div className="flex items-center gap-4">
-          <button
-            onClick={toggleLike}
-            className={`flex items-center gap-1.5 text-sm transition-colors ${liked ? 'text-red-400' : 'text-gray-400 hover:text-red-400'}`}
-          >
+          <button onClick={toggleLike} className={`flex items-center gap-1.5 text-sm transition-colors ${liked ? 'text-red-400' : 'text-gray-400 hover:text-red-400'}`}>
             <Heart size={16} fill={liked ? 'currentColor' : 'none'} />
             <span>{likeCount}</span>
           </button>
-          <button
-            onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
-          >
+          <button onClick={() => setShowComments(!showComments)} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors">
             <MessageCircle size={16} />
             <span>{comments.length}</span>
           </button>
         </div>
-
         {showComments && (
           <div className="mt-3 bg-gray-900/80 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
             {comments.length === 0 ? (
@@ -176,7 +160,6 @@ function HighlightCard({ highlight, isOwner }: { highlight: any; isOwner: boolea
   )
 }
 
-// ─── Direct Messages Modal ────────────────────────────────────────────────────
 function DirectModal({ targetNickname, onClose }: { targetNickname: string; onClose: () => void }) {
   const [messages, setMessages] = useState<any[]>([])
   const [text, setText] = useState('')
@@ -184,17 +167,16 @@ function DirectModal({ targetNickname, onClose }: { targetNickname: string; onCl
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Получаем или создаём чат
     fetch(`/api/chats/with/${targetNickname}`)
       .then(r => r.json())
-      .then(data => {
+      .then(async data => {
         if (data.chat) {
           setChatId(data.chat.id)
-          return fetch(`/api/chats/${data.chat.id}/messages`)
+          const msgRes = await fetch(`/api/chats/${data.chat.id}/messages`)
+          const msgData = await msgRes.json()
+          if (msgData?.messages) setMessages(msgData.messages)
         }
       })
-      .then(r => r?.json())
-      .then(data => { if (data?.messages) setMessages(data.messages) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [targetNickname])
@@ -207,16 +189,15 @@ function DirectModal({ targetNickname, onClose }: { targetNickname: string; onCl
       body: JSON.stringify({ content: text })
     })
     if (res.ok) {
-      setText('')
       const data = await res.json()
-      setMessages(prev => [...prev, data.message])
+      setText('')
+      setMessages(prev => [...prev, { ...data.message, is_mine: true }])
     }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="w-full max-w-lg bg-gray-900 rounded-2xl overflow-hidden flex flex-col shadow-2xl border border-gray-700/50" style={{ height: '520px' }}>
-        {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-800 bg-gray-950/80">
           <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
             {targetNickname[0]?.toUpperCase()}
@@ -230,7 +211,6 @@ function DirectModal({ targetNickname, onClose }: { targetNickname: string; onCl
           </button>
         </div>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (
             <div className="flex items-center justify-center h-full">
@@ -242,8 +222,8 @@ function DirectModal({ targetNickname, onClose }: { targetNickname: string; onCl
               <p className="text-gray-500 text-sm">Начните диалог с {targetNickname}</p>
             </div>
           ) : (
-            messages.map((m: any) => (
-              <div key={m.id} className={`flex ${m.is_mine ? 'justify-end' : 'justify-start'}`}>
+            messages.map((m: any, i: number) => (
+              <div key={m.id || i} className={`flex ${m.is_mine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-xs px-4 py-2 rounded-2xl text-sm ${
                   m.is_mine
                     ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-br-sm'
@@ -256,7 +236,6 @@ function DirectModal({ targetNickname, onClose }: { targetNickname: string; onCl
           )}
         </div>
 
-        {/* Input */}
         <div className="px-4 py-3 border-t border-gray-800 bg-gray-950/50 flex gap-2">
           <input
             value={text}
@@ -278,7 +257,6 @@ function DirectModal({ targetNickname, onClose }: { targetNickname: string; onCl
   )
 }
 
-// ─── Main Profile Page ────────────────────────────────────────────────────────
 export default function ProfilePage() {
   const { nickname } = useParams<{ nickname: string }>()
   const router = useRouter()
@@ -293,12 +271,22 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showDirect, setShowDirect] = useState(false)
-  const [activeTab, setActiveTab] = useState<'highlights' | 'stats'>('highlights')
   const [myNickname, setMyNickname] = useState('')
 
   useEffect(() => {
-    const saved = localStorage.getItem('currentNickname')
-    if (saved) setMyNickname(saved)
+    // Один запрос для авторизации
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => {
+        if (data.user) {
+          setUser(data.user)
+          if (data.user.faceit_nickname) {
+            setMyNickname(data.user.faceit_nickname)
+          }
+          if (data.user.faceit_nickname === nickname) setIsOwner(true)
+        }
+      })
+      .catch(() => {})
 
     fetch(`/api/faceit?nickname=${nickname}`)
       .then(r => r.json())
@@ -315,7 +303,6 @@ export default function ProfilePage() {
       .then(data => {
         const hl = data.highlights || []
         setHighlights(hl)
-        // Считаем общее число лайков
         Promise.all(hl.map((h: any) =>
           fetch(`/api/social/like?highlight_id=${h.id}&user_nickname=_`)
             .then(r => r.json())
@@ -324,16 +311,6 @@ export default function ProfilePage() {
         )).then(counts => setTotalLikes(counts.reduce((a: number, b: number) => a + b, 0)))
       })
       .catch(() => setHighlights([]))
-
-    fetch('/api/auth/me')
-      .then(r => r.json())
-      .then(data => {
-        if (data.user) {
-          setUser(data.user)
-          if (data.user.faceit_nickname === nickname) setIsOwner(true)
-        }
-      })
-      .catch(() => {})
 
     fetch(`/api/social/follow?followee=${nickname}`)
       .then(r => r.json())
@@ -357,19 +334,21 @@ export default function ProfilePage() {
 
   const handleFollow = async () => {
     if (isOwner) return
-    if (!myNickname) return alert('Войдите под своим ником')
+    if (!myNickname) return alert('Войдите в аккаунт')
     const res = await fetch('/api/social/follow', {
       method: isFollowing ? 'DELETE' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ follower: myNickname, followee: nickname })
+      body: JSON.stringify({ followee: nickname })
     })
     if (res.ok) {
       setIsFollowing(!isFollowing)
       setFollowerCount(prev => isFollowing ? prev - 1 : prev + 1)
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Ошибка')
     }
   }
 
-  // ELO уровень → цвет
   const eloColor = (elo: number) => {
     if (elo >= 2001) return 'from-red-500 to-orange-500'
     if (elo >= 1501) return 'from-purple-500 to-pink-500'
@@ -381,24 +360,14 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white flex">
-      {/* Кнопка меню мобайл */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 md:hidden bg-gray-800 p-2 rounded-xl"
-      >
+      <button onClick={() => setSidebarOpen(!sidebarOpen)} className="fixed top-4 left-4 z-50 md:hidden bg-gray-800 p-2 rounded-xl">
         {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       <Sidebar nickname={myNickname} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      {/* Контент */}
       <main className="flex-1 p-6 md:p-10 max-w-4xl">
-
-        {/* Назад */}
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6 text-sm"
-        >
+        <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6 text-sm">
           <ArrowLeft size={16} /> Назад
         </button>
 
@@ -408,14 +377,9 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="space-y-6">
-
-            {/* ─── Hero Card ─── */}
             <div className="bg-gray-800/50 rounded-2xl overflow-hidden">
-              {/* Баннер */}
               <div className={`h-24 bg-gradient-to-r ${eloColor(elo)} opacity-30`} />
-
               <div className="px-6 pb-6">
-                {/* Аватар + кнопки */}
                 <div className="flex items-end justify-between -mt-10 mb-4">
                   <div className="relative">
                     <img
@@ -430,33 +394,22 @@ export default function ProfilePage() {
                     {user ? (
                       isOwner ? (
                         <>
-                          <Link
-                            href="/profile/setup"
-                            className="flex items-center gap-1.5 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors"
-                          >
+                          <Link href="/profile/setup" className="flex items-center gap-1.5 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors">
                             <Edit size={14} /> Редактировать
                           </Link>
-                          <Link
-                            href="/cabinet"
-                            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl text-sm font-semibold transition-all"
-                          >
+                          <Link href="/cabinet" className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl text-sm font-semibold transition-all">
                             <Upload size={14} /> Кабинет
                           </Link>
                         </>
                       ) : (
                         <>
-                          <button
-                            onClick={() => setShowDirect(true)}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors"
-                          >
+                          <button onClick={() => setShowDirect(true)} className="flex items-center gap-1.5 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors">
                             <Send size={14} /> Написать
                           </button>
                           <button
                             onClick={handleFollow}
                             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                              isFollowing
-                                ? 'bg-gray-700 hover:bg-red-500/20 hover:text-red-400'
-                                : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90'
+                              isFollowing ? 'bg-gray-700 hover:bg-red-500/20 hover:text-red-400' : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90'
                             }`}
                           >
                             <Users size={14} /> {isFollowing ? 'Отписаться' : 'Подписаться'}
@@ -471,7 +424,6 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Имя + ELO */}
                 <div className="mb-4">
                   <div className="flex items-center gap-3 flex-wrap">
                     <h1 className="text-2xl font-black">{profile.nickname || nickname}</h1>
@@ -482,7 +434,6 @@ export default function ProfilePage() {
                   {bio && <p className="text-gray-400 text-sm mt-1 max-w-md">{bio}</p>}
                 </div>
 
-                {/* Счётчики */}
                 <div className="grid grid-cols-4 gap-3">
                   {[
                     { label: 'Подписчики', value: followerCount, icon: Users, color: 'text-blue-400' },
@@ -500,7 +451,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* ─── Статистика Faceit ─── */}
             <div className="bg-gray-800/50 rounded-2xl p-6">
               <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                 <BarChart3 size={18} className="text-blue-400" /> Статистика Faceit
@@ -520,7 +470,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* ─── Хайлайты ─── */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold flex items-center gap-2">
@@ -551,12 +500,10 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-
           </div>
         )}
       </main>
 
-      {/* Direct Modal */}
       {showDirect && (
         <DirectModal targetNickname={nickname} onClose={() => setShowDirect(false)} />
       )}
