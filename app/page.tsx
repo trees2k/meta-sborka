@@ -90,19 +90,14 @@ function InfoSection() {
 
 function UpdatesSection() {
   const updates = [
-     { date: '06.06.2026', title: 'Верификация Faceit аккаунта', desc: 'Теперь никнейм подтверждается через уникальный код в bio на Faceit — никто не может занять чужой аккаунт', tag: 'Новое', tagColor: 'bg-green-500' },
-     { date: '06.06.2026', title: 'Подбор команды', desc: 'Умный матчмейкинг по роли, стилю общения, психотипу и ELO. После анкеты сразу показывает подходящих тиммейтов', tag: 'Новое', tagColor: 'bg-green-500' },
-     { date: '06.06.2026', title: 'Страница сообщений', desc: 'Полноценный мессенджер — список диалогов, история сообщений, поиск по никнейму', tag: 'Новое', tagColor: 'bg-green-500' },
-     { date: '06.06.2026', title: 'Новый профиль и кабинет', desc: 'Переработан дизайн профиля — счётчики лайков, хайлайтов, подписчиков. Кабинет с ELO трекером и историей демок', tag: 'Улучшено', tagColor: 'bg-blue-500' },
-     { date: '06.06.2026', title: 'Разбор демок — новый UI', desc: 'Пошаговая инструкция по загрузке демки с Faceit. Drag & drop файлов без перезагрузки страницы', tag: 'Улучшено', tagColor: 'bg-blue-500' },
-     { date: '18.05.2026', title: 'Видео-клипы хайлайтов', desc: 'Теперь при загрузке демки автоматически генерируются видео-клипы лучших моментов', tag: 'Новое', tagColor: 'bg-green-500' },
-     { date: '17.05.2026', title: 'Лента хайлайтов', desc: 'Добавлена лента хайлайтов в стиле Reels с лайками и комментариями', tag: 'Новое', tagColor: 'bg-green-500' },
-     { date: '12.05.2026', title: 'Telegram бот', desc: '@Metasborka_bot — получайте уведомления о матчах', tag: 'Бета', tagColor: 'bg-purple-500' },
-     { date: '18.05.2026', title: 'Видео-клипы хайлайтов', desc: 'Теперь при загрузке демки автоматически генерируются видео-клипы лучших моментов', tag: 'Новое', tagColor: 'bg-green-500' },
-     { date: '17.05.2026', title: 'Лента хайлайтов', desc: 'Добавлена лента хайлайтов в стиле Reels с лайками и комментариями', tag: 'Новое', tagColor: 'bg-green-500' },
-     { date: '17.05.2026', title: 'Анализ демок', desc: 'Реальный парсинг демок CS2 через VPS. Показывает K/D, ADR, KAST, HS%, клатчи', tag: 'Улучшено', tagColor: 'bg-blue-500' },
-     { date: '15.05.2026', title: 'Профиль игрока', desc: 'Привязка Faceit, отслеживание ELO, цели на месяц', tag: 'Новое', tagColor: 'bg-green-500' },
-     { date: '12.05.2026', title: 'Telegram бот', desc: '@Metasborka_bot — получайте уведомления о матчах', tag: 'Бета', tagColor: 'bg-purple-500' },
+    { date: '06.06.2026', title: 'Верификация Faceit аккаунта', desc: 'Никнейм подтверждается через Steam ID — никто не может занять чужой аккаунт', tag: 'Новое', tagColor: 'bg-green-500' },
+    { date: '05.06.2026', title: 'Подбор команды', desc: 'Умный матчмейкинг по роли, стилю общения, психотипу и ELO. После анкеты сразу показывает подходящих тиммейтов', tag: 'Новое', tagColor: 'bg-green-500' },
+    { date: '04.06.2026', title: 'Страница сообщений', desc: 'Полноценный мессенджер — список диалогов, история сообщений, поиск по никнейму', tag: 'Новое', tagColor: 'bg-green-500' },
+    { date: '03.06.2026', title: 'Новый профиль и кабинет', desc: 'Переработан дизайн профиля — счётчики лайков, хайлайтов, подписчиков. Кабинет с ELO трекером и историей демок', tag: 'Улучшено', tagColor: 'bg-blue-500' },
+    { date: '02.06.2026', title: 'Разбор демок — новый UI', desc: 'Пошаговая инструкция по загрузке демки с Faceit. Drag & drop файлов без перезагрузки страницы', tag: 'Улучшено', tagColor: 'bg-blue-500' },
+    { date: '01.06.2026', title: 'Видео-клипы хайлайтов', desc: 'При загрузке демки автоматически генерируются видео-клипы лучших моментов', tag: 'Новое', tagColor: 'bg-green-500' },
+    { date: '31.05.2026', title: 'Лента хайлайтов', desc: 'Лента хайлайтов в стиле Reels с лайками и комментариями', tag: 'Новое', tagColor: 'bg-green-500' },
+    { date: '30.05.2026', title: 'Telegram бот', desc: '@Metasborka_bot — получайте уведомления о матчах', tag: 'Бета', tagColor: 'bg-purple-500' },
   ]
   return (
     <div className="space-y-6">
@@ -277,10 +272,28 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState('info')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [nickname, setNickname] = useState('')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('currentNickname')
     if (saved) setNickname(saved)
+
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => {
+        if (data.user) {
+          setIsLoggedIn(true)
+          if (data.user.faceit_nickname) {
+            setNickname(data.user.faceit_nickname)
+            localStorage.setItem('currentNickname', data.user.faceit_nickname)
+          }
+        } else {
+          setIsLoggedIn(false)
+          setNickname('')
+          localStorage.removeItem('currentNickname')
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const ActiveComponent = sections[activeSection]
@@ -335,52 +348,62 @@ export default function Home() {
         </nav>
 
         <div className="p-4 border-t border-gray-800/50 space-y-2">
-  <Link href="/highlights" className="flex items-center gap-2 px-4 py-2 text-sm text-pink-400 hover:bg-gray-800/50 rounded-xl transition-all">
-    <Play size={16} /> Хайлайты
-  </Link>
-  <Link href="/cabinet" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
-    <BarChart3 size={16} /> Кабинет
-  </Link>
-  <Link href="/blog" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:bg-gray-800/50 rounded-xl transition-all">
-    <Star size={16} /> Блог
-  </Link>
-  <Link href="/messages" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
-    <MessageCircle size={16} /> Сообщения
-  </Link>
+          <Link href="/highlights" className="flex items-center gap-2 px-4 py-2 text-sm text-pink-400 hover:bg-gray-800/50 rounded-xl transition-all">
+            <Play size={16} /> Хайлайты
+          </Link>
+          <Link href="/cabinet" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
+            <BarChart3 size={16} /> Кабинет
+          </Link>
+          <Link href="/blog" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:bg-gray-800/50 rounded-xl transition-all">
+            <Star size={16} /> Блог
+          </Link>
+          <Link href="/messages" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
+            <MessageCircle size={16} /> Сообщения
+          </Link>
 
-  {nickname ? (
-    <div className="mt-2 space-y-1">
-      <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-3 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors">
-        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
-          {nickname[0]?.toUpperCase()}
+          {isLoggedIn ? (
+            <div className="mt-2 space-y-1">
+              {nickname ? (
+                <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-3 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    {nickname[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{nickname}</p>
+                    <p className="text-xs text-gray-500">Профиль</p>
+                  </div>
+                </Link>
+              ) : (
+                <Link href="/profile/setup" className="flex items-center gap-2 px-4 py-3 bg-orange-500/20 hover:bg-orange-500/30 rounded-xl transition-colors">
+                  <div className="w-8 h-8 bg-orange-500/30 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-orange-400">?</div>
+                  <div>
+                    <p className="text-sm font-semibold text-orange-400">Привязать Faceit</p>
+                    <p className="text-xs text-gray-500">Нажми чтобы настроить</p>
+                  </div>
+                </Link>
+              )}
+              <button
+                onClick={async () => {
+                  await fetch('/api/auth/logout', { method: 'POST' })
+                  localStorage.removeItem('currentNickname')
+                  window.location.href = '/'
+                }}
+                className="w-full px-4 py-2 text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-left"
+              >
+                Выйти из аккаунта
+              </button>
+            </div>
+          ) : (
+            <div className="mt-2 space-y-2">
+              <Link href="/auth/login" className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl text-sm font-semibold transition-all">
+                Войти в аккаунт
+              </Link>
+              <Link href="/auth/signup" className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-800/50 hover:bg-gray-800 rounded-xl text-sm text-gray-400 transition-all">
+                Зарегистрироваться
+              </Link>
+            </div>
+          )}
         </div>
-        <div>
-          <p className="text-sm font-semibold">{nickname}</p>
-          <p className="text-xs text-gray-500">Профиль</p>
-        </div>
-      </Link>
-      <button
-        onClick={async () => {
-          await fetch('/api/auth/logout', { method: 'POST' })
-          localStorage.removeItem('currentNickname')
-          window.location.href = '/'
-        }}
-        className="w-full px-4 py-2 text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-left"
-      >
-        Выйти из аккаунта
-      </button>
-    </div>
-  ) : (
-    <div className="mt-2 space-y-2">
-      <Link href="/auth/login" className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl text-sm font-semibold transition-all">
-        Войти в аккаунт
-      </Link>
-      <Link href="/auth/signup" className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-800/50 hover:bg-gray-800 rounded-xl text-sm text-gray-400 transition-all">
-        Зарегистрироваться
-      </Link>
-    </div>
-  )}
-</div>
       </aside>
 
       <main className="flex-1 p-6 md:p-10 max-w-4xl">
