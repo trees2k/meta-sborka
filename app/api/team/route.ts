@@ -22,6 +22,20 @@ async function getNicknameFromCookie(request: Request) {
   }
 }
  
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const nickname = searchParams.get('nickname')
+  if (!nickname) return NextResponse.json({ data: null })
+ 
+  const { data } = await supabase
+    .from('player_profile')
+    .select('*')
+    .eq('nickname', nickname)
+    .single()
+ 
+  return NextResponse.json({ data: data || null })
+}
+ 
 export async function POST(request: Request) {
   try {
     const nickname = await getNicknameFromCookie(request)
@@ -32,7 +46,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Заполни все поля' }, { status: 400 })
     }
  
-    // Получаем ELO игрока
     const FACEIT_API_KEY = process.env.FACEIT_API_KEY
     let faceit_elo = 1000
     try {
@@ -43,8 +56,7 @@ export async function POST(request: Request) {
       faceit_elo = data.games?.cs2?.faceit_elo || 1000
     } catch {}
  
-    // Сохраняем анкету
-    await supabase.from('player_profile').upsert({
+    const { error: upsertError } = await supabase.from('player_profile').upsert({
       nickname,
       role,
       style,
@@ -53,7 +65,11 @@ export async function POST(request: Request) {
       faceit_elo,
     }, { onConflict: 'nickname' })
  
-    // Подбор игроков — ELO ±400
+    if (upsertError) {
+      console.error('Upsert error:', upsertError)
+      return NextResponse.json({ error: upsertError.message }, { status: 500 })
+    }
+ 
     const { data: allPlayers } = await supabase
       .from('player_profile')
       .select('*')
@@ -65,7 +81,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, matches: [] })
     }
  
-    // Скоринг
     const scored = allPlayers.map(p => {
       let score = 0
       if (p.style === style) score += 30
@@ -78,7 +93,6 @@ export async function POST(request: Request) {
     })
  
     const matches = scored.sort((a, b) => b.score - a.score).slice(0, 5)
- 
     return NextResponse.json({ ok: true, matches })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

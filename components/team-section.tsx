@@ -64,6 +64,7 @@ export function TeamSection() {
   const [psychotype, setPsychotype] = useState('')
   const [goal, setGoal] = useState('')
   const [loading, setLoading] = useState(false)
+  const [initLoading, setInitLoading] = useState(true)
   const [error, setError] = useState('')
   const [formStep, setFormStep] = useState(1)
   const [matches, setMatches] = useState<any[]>([])
@@ -72,10 +73,39 @@ export function TeamSection() {
   useEffect(() => {
     fetch('/api/auth/me')
       .then(r => r.json())
-      .then(data => {
-        if (data.user?.faceit_nickname) setNickname(data.user.faceit_nickname)
+      .then(async data => {
+        if (data.user?.faceit_nickname) {
+          const nick = data.user.faceit_nickname
+          setNickname(nick)
+          // Загружаем существующую анкету
+          try {
+            const res = await fetch(`/api/team?nickname=${encodeURIComponent(nick)}`)
+            const profile = await res.json()
+            if (profile.data?.role) {
+              setRole(profile.data.role)
+              setStyle(profile.data.style || '')
+              setPsychotype(profile.data.psychotype || '')
+              setGoal(profile.data.goal || '')
+              // Загружаем матчи
+              const matchRes = await fetch('/api/team', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  role: profile.data.role,
+                  style: profile.data.style,
+                  psychotype: profile.data.psychotype,
+                  goal: profile.data.goal,
+                })
+              })
+              const matchData = await matchRes.json()
+              setMatches(matchData.matches || [])
+              setStep('success')
+            }
+          } catch {}
+        }
       })
       .catch(() => {})
+      .finally(() => setInitLoading(false))
   }, [])
 
   const handleSubmit = async () => {
@@ -111,15 +141,24 @@ export function TeamSection() {
   }
 
   const reset = () => {
-    setStep('intro')
-    setRole('')
-    setStyle('')
-    setPsychotype('')
-    setGoal('')
+    setStep('form')
     setFormStep(1)
     setMatches([])
+    setError('')
   }
 
+  if (initLoading) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-3xl font-black">Подбор команды</h2>
+        <div className="flex justify-center py-12">
+          <div className="w-10 h-10 border-4 border-green-500/30 border-t-green-500 rounded-full animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Интро ───
   if (step === 'intro') {
     return (
       <div className="space-y-6">
@@ -175,6 +214,7 @@ export function TeamSection() {
     )
   }
 
+  // ─── Успех ───
   if (step === 'success') {
     return (
       <div className="space-y-6">
@@ -186,8 +226,8 @@ export function TeamSection() {
               <CheckCircle size={20} className="text-emerald-400" />
             </div>
             <div>
-              <p className="font-black text-lg">Анкета отправлена!</p>
-              <p className="text-gray-400 text-sm">Твои данные сохранены в базе</p>
+              <p className="font-black text-lg">Анкета сохранена</p>
+              <p className="text-gray-400 text-sm">{nickname}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -268,7 +308,7 @@ export function TeamSection() {
             <div className="bg-gray-800/50 rounded-2xl p-8 text-center">
               <Users size={40} className="text-gray-700 mx-auto mb-3" />
               <p className="text-gray-400 font-semibold mb-1">Пока нет подходящих игроков</p>
-              <p className="text-gray-500 text-sm">Мы уведомим тебя когда появятся тиммейты с похожим стилем</p>
+              <p className="text-gray-500 text-sm">Как только появятся тиммейты с похожим стилем — они отобразятся здесь</p>
             </div>
           )}
         </div>
@@ -280,6 +320,7 @@ export function TeamSection() {
     )
   }
 
+  // ─── Форма ───
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
