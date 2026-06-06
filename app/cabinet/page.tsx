@@ -1,525 +1,633 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { TrendingUp, Target, Calendar, Upload } from 'lucide-react'
-
 export const dynamic = 'force-dynamic'
 
-const mapColors: Record<string, string> = {
-  'de_mirage': 'from-amber-900 to-yellow-800',
-  'de_dust2': 'from-yellow-900 to-orange-800',
-  'de_inferno': 'from-red-900 to-orange-800',
-  'de_nuke': 'from-slate-800 to-cyan-900',
-  'de_ancient': 'from-emerald-900 to-teal-800',
-  'de_anubis': 'from-amber-900 to-stone-800',
-  'de_vertigo': 'from-sky-900 to-indigo-800',
-  'de_overpass': 'from-green-900 to-lime-800',
-}
+import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
+import {
+  BarChart3, Play, Users, Trophy, Upload, Star,
+  TrendingUp, Zap, Shield, Target, ChevronRight,
+  Menu, X, Clock, Swords, BarChart2, Download,
+  CheckCircle, AlertCircle, Heart, Video
+} from 'lucide-react'
 
-function detectHighlights(data: any, nickname: string, map: string) {
-  const highlights: any[] = []
-  const players = data?.players || {}
-
-  let player: any = null
-  for (const [, p] of Object.entries(players) as any) {
-    if (p.name === nickname) { player = p; break }
-  }
-  if (!player) {
-    const all = Object.values(players) as any[]
-    if (all.length > 0) player = all[0]
-  }
-  if (!player) return highlights
-
-  const color = mapColors[map] || 'from-blue-600 to-purple-600'
-  const rounds = data?.rounds || []
-  const totalRounds = rounds.length || 1
-
-  // Мульти-киллы по раундам
-  if (rounds.length > 0) {
-    rounds.forEach((round: any, i: number) => {
-      const killEvents = (round.kills || round.events || []).filter((e: any) => {
-        const killer = e.killer_name || e.killerName || e.attackerName || e.attacker_name || ''
-        return killer === player.name
-      })
-      if (killEvents.length >= 5) {
-        highlights.push({
-          nickname: player.name, type: 'ACE', emoji: '⭐',
-          description: `ACE в раунде ${i + 1}! 5 убийств!`,
-          map, round_number: i + 1, kills: player.killCount,
-          deaths: player.deathCount, kd: player.killDeathRatio,
-          stats: { weapons: killEvents.map((k: any) => k.weapon || k.weaponName || 'unknown') },
-          color
-        })
-      } else if (killEvents.length >= 4) {
-        highlights.push({
-          nickname: player.name, type: '4K', emoji: '⚡',
-          description: `4 убийства в раунде ${i + 1}!`,
-          map, round_number: i + 1, kills: player.killCount,
-          deaths: player.deathCount, kd: player.killDeathRatio, stats: {}, color
-        })
-      } else if (killEvents.length >= 3) {
-        highlights.push({
-          nickname: player.name, type: '3K', emoji: '💥',
-          description: `3 убийства в раунде ${i + 1}!`,
-          map, round_number: i + 1, kills: player.killCount,
-          deaths: player.deathCount, kd: player.killDeathRatio, stats: {}, color
-        })
-      }
-    })
-  }
-
-  // Клатчи
-  if (player.oneVsFiveWonCount > 0) {
-    highlights.push({
-      nickname: player.name, type: '1v5 CLUTCH', emoji: '🏆',
-      description: `Выиграл 1v5 клатч! Невероятно!`,
-      map, kills: player.killCount, deaths: player.deathCount,
-      kd: player.killDeathRatio, stats: {}, color: 'from-yellow-500 to-red-600'
-    })
-  }
-  if (player.oneVsFourWonCount > 0) {
-    highlights.push({
-      nickname: player.name, type: '1v4 CLUTCH', emoji: '💪',
-      description: `Выиграл ${player.oneVsFourWonCount}x 1v4 клатч!`,
-      map, kills: player.killCount, deaths: player.deathCount,
-      kd: player.killDeathRatio, stats: {}, color: 'from-purple-500 to-pink-600'
-    })
-  }
-  if (player.oneVsThreeWonCount > 0) {
-    highlights.push({
-      nickname: player.name, type: '1v3 CLUTCH', emoji: '🔥',
-      description: `Выиграл ${player.oneVsThreeWonCount}x 1v3 клатч!`,
-      map, kills: player.killCount, deaths: player.deathCount,
-      kd: player.killDeathRatio, stats: {}, color: 'from-orange-500 to-red-600'
-    })
-  }
-
-  // Перформанс хайлайты
-  if (player.killDeathRatio >= 2.0) {
-    highlights.push({
-      nickname: player.name, type: 'MONSTER', emoji: '👹',
-      description: `K/D ${player.killDeathRatio.toFixed(2)} — доминация!`,
-      map, kills: player.killCount, deaths: player.deathCount,
-      kd: player.killDeathRatio, stats: {
-        adr: Math.round(player.healthDamage / totalRounds),
-        hs: player.headshotPercent
-      }, color: 'from-red-600 to-rose-800'
-    })
-  }
-  if (player.headshotPercent >= 60) {
-    highlights.push({
-      nickname: player.name, type: 'HEADSHOT MACHINE', emoji: '🎯',
-      description: `${player.headshotPercent.toFixed(0)}% хедшотов! Аим-бог!`,
-      map, kills: player.killCount, deaths: player.deathCount,
-      kd: player.killDeathRatio, stats: {}, color: 'from-green-500 to-emerald-700'
-    })
-  }
-  if (player.mvpCount >= 5) {
-    highlights.push({
-      nickname: player.name, type: 'MVP KING', emoji: '👑',
-      description: `${player.mvpCount} MVP за матч!`,
-      map, kills: player.killCount, deaths: player.deathCount,
-      kd: player.killDeathRatio, stats: {}, color: 'from-yellow-500 to-amber-700'
-    })
-  }
-
-  return highlights
-}
-
-function CabinetContent() {
-  const searchParams = useSearchParams()
-  const [nickname, setNickname] = useState('')
-  const [player, setPlayer] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [goal, setGoal] = useState<any>(null)
-  const [targetInput, setTargetInput] = useState('')
-  const [eloHistory, setEloHistory] = useState<any[]>([])
-  const [demos, setDemos] = useState<any[]>([])
-  const [demosLoading, setDemosLoading] = useState(false)
-  const [analyses, setAnalyses] = useState<any[]>([])
-  const [parseResult, setParseResult] = useState<any>(null)
-  const [parsing, setParsing] = useState(false)
-  const [parseProgress, setParseProgress] = useState('')
-  const [foundHighlights, setFoundHighlights] = useState<any[]>([])
-
-  useEffect(() => {
-    const paramNick = searchParams.get('nickname')
-    if (paramNick) {
-      setNickname(paramNick)
-      localStorage.setItem('currentNickname', paramNick)
-    } else {
-      const saved = localStorage.getItem('currentNickname')
-      if (saved) setNickname(saved)
-    }
-  }, [searchParams])
-
-  useEffect(() => {
-    if (!nickname) return
-    const savedGoal = localStorage.getItem(`goal_${nickname}`)
-    if (savedGoal) setGoal(JSON.parse(savedGoal))
-  }, [nickname])
-
-  useEffect(() => {
-    if (!nickname) return
-    setLoading(true)
-    fetch(`/api/faceit?nickname=${encodeURIComponent(nickname)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { setError('Игрок не найден'); setPlayer(null) }
-        else {
-          setPlayer(data)
-          setError('')
-          fetch('/api/elo', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nickname: data.nickname, elo: data.elo })
-          }).catch(() => {})
-        }
-      })
-      .catch(() => setError('Ошибка загрузки'))
-      .finally(() => setLoading(false))
-
-    fetch(`/api/elo?nickname=${encodeURIComponent(nickname)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setEloHistory(data.map((d: any) => ({ date: d.recorded_at, elo: d.elo })))
-        }
-      })
-      .catch(() => {})
-  }, [nickname])
-
-  const handleSetGoal = () => {
-    if (!player || !targetInput) return
-    const increase = parseInt(targetInput)
-    if (isNaN(increase) || increase <= 0) return
-    const newGoal = {
-      startDate: new Date().toISOString().split('T')[0],
-      startElo: player.elo,
-      targetElo: player.elo + increase,
-      nickname: player.nickname
-    }
-    setGoal(newGoal)
-    localStorage.setItem(`goal_${player.nickname}`, JSON.stringify(newGoal))
-    setTargetInput('')
-  }
-
-  const handleFetchDemos = async () => {
-    if (!nickname) return
-    setDemosLoading(true)
-    try {
-      const res = await fetch(`/api/faceit?nickname=${encodeURIComponent(nickname)}`, { method: 'PATCH' })
-      const data = await res.json()
-      if (data.matches) setDemos(data.matches)
-      else alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'))
-    } catch { alert('Ошибка при загрузке демок') }
-    setDemosLoading(false)
-  }
-
-  const handleFetchAnalyses = async () => {
-    if (!nickname) return
-    const res = await fetch(`/api/demo/history?nickname=${encodeURIComponent(nickname)}`)
-    const data = await res.json()
-    if (data.analyses) setAnalyses(data.analyses)
-  }
-
-  const handleFileParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !nickname) return
-
-    setParsing(true)
-    setParseResult(null)
-    setFoundHighlights([])
-    setParseProgress('Загрузка файла на сервер...')
-
-    const vpsUrl = process.env.NEXT_PUBLIC_VPS_URL
-    if (!vpsUrl) { alert('VPS URL не настроен'); setParsing(false); return }
-
-    const formData = new FormData()
-    formData.append('file', file)
-
-    try {
-      setParseProgress(`Загрузка ${(file.size / 1024 / 1024).toFixed(0)} МБ...`)
-      const res = await fetch(`${vpsUrl}/analyze`, { method: 'POST', body: formData })
-      const data = await res.json()
-
-      if (data.status !== 'ok') {
-        alert('Ошибка анализа: ' + (data.detail || 'Неизвестная'))
-        setParsing(false); setParseProgress(''); return
-      }
-
-      setParseProgress('Анализ результатов...')
-
-      const players = data.data?.players || {}
-      let found: any = null
-      for (const [, p] of Object.entries(players) as any) {
-        if (p.name === nickname) { found = p; break }
-      }
-      if (!found) {
-        const all = Object.values(players) as any[]
-        if (all.length > 0) found = all[0]
-      }
-      if (!found) {
-        alert('Игрок не найден в демке')
-        setParsing(false); setParseProgress(''); return
-      }
-
-      const mapName = data.data?.mapName || 'unknown'
-      const rounds = data.data?.rounds?.length || 1
-      const stats = {
-        name: found.name, kills: found.killCount || 0, deaths: found.deathCount || 0,
-        assists: found.assistCount || 0, kd: found.killDeathRatio || 0,
-        kast: found.kast || 0, headshotPercent: found.headshotPercent || 0,
-        headshotCount: found.headshotCount || 0,
-        adr: Math.round((found.healthDamage || 0) / rounds),
-        utilityDamage: found.utilityDamage || 0, mvps: found.mvpCount || 0,
-        score: found.score || 0, map: mapName,
-        clutch1v1Won: found.oneVsOneWonCount || 0,
-        clutch1v2Won: found.oneVsTwoWonCount || 0,
-        clutch1v3Won: found.oneVsThreeWonCount || 0,
-        clutch1v4Won: found.oneVsFourWonCount || 0,
-        clutch1v5Won: found.oneVsFiveWonCount || 0,
-      }
-      setParseResult(stats)
-
-      // Детекция хайлайтов
-      setParseProgress('Поиск крутых моментов...')
-      const detected = detectHighlights(data.data, nickname, mapName)
-      setFoundHighlights(detected)
-
-      // Сохраняем хайлайты в Supabase
-       if (detected.length > 0) {
-        setParseProgress('Генерация видео-клипов...')
-
-        const withClips = await Promise.all(
-          detected.map(async (h: any) => {
-            try {
-              const clipRes = await fetch(`${vpsUrl}/generate-clip`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(h)
-              })
-              const clipData = await clipRes.json()
-              if (clipData.status === 'ok') {
-                return { ...h, video_url: `${vpsUrl}${clipData.video_url}` }
-              }
-            } catch {}
-            return h
-          })
-        )
-
-        setFoundHighlights(withClips)
-
-        await fetch('/api/highlights/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ highlights: withClips })
-        })
-      }
-
-      // Сохраняем анализ
-      try {
-        await fetch('/api/demo/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nickname, ...stats })
-        })
-      } catch {}
-
-      setParseProgress('')
-    } catch (err: any) {
-      alert('Ошибка: ' + err.message)
-      setParseProgress('')
-    } finally {
-      setParsing(false)
-    }
-  }
-
-  const progressPercent = goal && player
-    ? Math.max(0, Math.min(100, ((player.elo - goal.startElo) / (goal.targetElo - goal.startElo)) * 100))
-    : 0
-  const daysLeft = goal
-    ? Math.max(0, 30 - Math.floor((new Date().getTime() - new Date(goal.startDate).getTime()) / (1000 * 60 * 60 * 24)))
-    : 0
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+function Sidebar({ nickname, sidebarOpen, setSidebarOpen, activeTab, setActiveTab }: {
+  nickname: string
+  sidebarOpen: boolean
+  setSidebarOpen: (v: boolean) => void
+  activeTab: string
+  setActiveTab: (t: string) => void
+}) {
+  const tabs = [
+    { id: 'overview', label: 'Обзор', icon: BarChart3, color: 'from-blue-500 to-cyan-500' },
+    { id: 'demos', label: 'Демки', icon: Swords, color: 'from-red-500 to-orange-500' },
+    { id: 'highlights', label: 'Мои хайлайты', icon: Play, color: 'from-pink-500 to-purple-500' },
+    { id: 'elo', label: 'ELO трекер', icon: TrendingUp, color: 'from-green-500 to-emerald-500' },
+  ]
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white p-6">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="text-blue-500 hover:underline">← На главную</Link>
-          <Link href="/highlights" className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-xl font-semibold text-sm">
-            🎬 Лента хайлайтов
+    <>
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/60 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+      <aside className={`
+        fixed md:sticky top-0 left-0 h-screen w-72 bg-gray-950/95 backdrop-blur-md
+        border-r border-gray-800/50 flex flex-col z-40
+        transition-transform duration-300
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        <div className="p-6 border-b border-gray-800/50">
+          <Link href="/">
+            <h1 className="text-2xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              UFUTURE
+            </h1>
           </Link>
+          <p className="text-xs text-gray-500 mt-1">Кабинет игрока</p>
         </div>
 
-        {!nickname && (
-          <div className="text-center py-20">
-            <h1 className="text-3xl font-bold mb-4">Введи никнейм Faceit</h1>
-            <form onSubmit={e => { e.preventDefault(); const i = (e.target as any).nick; window.location.href = `/cabinet?nickname=${encodeURIComponent(i.value)}` }}>
-              <input name="nick" type="text" placeholder="meesoez" className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white" />
-              <button type="submit" className="ml-2 px-4 py-2 bg-blue-500 rounded-xl font-semibold">Войти</button>
-            </form>
-          </div>
-        )}
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {tabs.map(item => {
+            const isActive = activeTab === item.id
+            return (
+              <button
+                key={item.id}
+                onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
+                className={`
+                  w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all
+                  ${isActive
+                    ? `bg-gradient-to-r ${item.color} text-white shadow-lg`
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                  }
+                `}
+              >
+                <item.icon size={20} />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            )
+          })}
 
-        {loading && <p className="text-center py-20">Загрузка...</p>}
-        {error && <p className="text-center py-20 text-red-500">{error}</p>}
-
-        {player && (
-          <>
-            <div className="flex items-center gap-4 bg-gray-800/50 rounded-2xl p-6">
-              <img src={player.avatar} className="w-16 h-16 rounded-full" alt="" />
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold">{player.nickname}</h1>
-                <p className="text-gray-400">Уровень {player.level} · ELO {player.elo}</p>
-              </div>
-              <Link href={`/profile/${player.nickname}`} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm">
-                Профиль
+          <div className="pt-2 border-t border-gray-800/50 mt-2">
+            {[
+              { href: '/', label: 'Главная', icon: BarChart3 },
+              { href: '/highlights', label: 'Лента хайлайтов', icon: Play },
+              { href: '/anketa', label: 'Найти команду', icon: Users },
+            ].map(item => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 hover:text-gray-300 hover:bg-gray-800/30 transition-all text-sm"
+              >
+                <item.icon size={16} />
+                {item.label}
               </Link>
-            </div>
+            ))}
+          </div>
+        </nav>
 
-            <div className="bg-gray-800/50 rounded-2xl p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Target size={20} /> Цель на месяц</h2>
-              {!goal ? (
-                <div className="flex gap-2">
-                  <input type="number" placeholder="На сколько ELO апнуть?" value={targetInput} onChange={e => setTargetInput(e.target.value)} className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white flex-1" />
-                  <button onClick={handleSetGoal} className="px-4 py-2 bg-blue-500 rounded-xl font-semibold">Установить</button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-between text-sm text-gray-400">
-                    <span>Старт: {goal.startElo} ELO</span>
-                    <span>Цель: {goal.targetElo} ELO</span>
-                    <span className="flex items-center gap-1"><Calendar size={14} /> {daysLeft} дн.</span>
-                  </div>
-                  <div className="w-full bg-gray-700 rounded-full h-4">
-                    <div className="bg-blue-500 h-4 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
-                  </div>
-                  <p className="text-sm text-gray-400">
-                    {progressPercent >= 100 ? '🎉 Цель достигнута!' : `Прогресс: ${progressPercent.toFixed(0)}% · Осталось ${goal.targetElo - player.elo} ELO`}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-gray-800/50 rounded-2xl p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><TrendingUp size={20} /> История ELO</h2>
-              {eloHistory.length > 1 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={eloHistory}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="date" stroke="#9CA3AF" />
-                    <YAxis stroke="#9CA3AF" />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="elo" stroke="#3b82f6" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-400">Недостаточно данных. Заходи ежедневно.</p>
-              )}
-            </div>
-
-            <div className="bg-gray-800/50 rounded-2xl p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Upload size={20} /> Анализ демок</h2>
-
-              <div className="mb-6">
-                <input type="file" accept=".dem" onChange={handleFileParse} disabled={parsing} className="mb-2 text-sm" />
-                {parsing && (
-                  <div className="text-yellow-400 text-sm mb-2">
-                    <p>⏳ {parseProgress}</p>
-                    <p className="text-gray-500 text-xs mt-1">Может занять 3-5 минут</p>
-                  </div>
-                )}
-
-                {parseResult && (
-                  <div className="bg-gray-900/50 rounded-xl p-4 mb-4">
-                    <p className="text-sm text-green-400 font-semibold mb-1">✅ {parseResult.name} — {parseResult.map}</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm mt-2">
-                      <div>💀 Убийства: <span className="font-bold">{parseResult.kills}</span></div>
-                      <div>☠️ Смерти: <span className="font-bold">{parseResult.deaths}</span></div>
-                      <div>⚔️ K/D: <span className="text-blue-400 font-bold">{parseResult.kd?.toFixed(2)}</span></div>
-                      <div>🔥 ADR: <span className="text-orange-400 font-bold">{parseResult.adr}</span></div>
-                      <div>🎯 HS%: <span className="text-green-400 font-bold">{parseResult.headshotPercent?.toFixed(1)}%</span></div>
-                      <div>📊 KAST: <span className="text-cyan-400 font-bold">{parseResult.kast?.toFixed(1)}%</span></div>
-                      <div>⭐ MVP: <span className="text-yellow-400 font-bold">{parseResult.mvps}</span></div>
-                      <div>💥 Утилиты: <span className="text-purple-400 font-bold">{parseResult.utilityDamage}</span></div>
-                      <div>🤝 Ассисты: <span className="font-bold">{parseResult.assists}</span></div>
-                    </div>
-                  </div>
-                )}
-
-                {foundHighlights.length > 0 && (
-                  <div className="space-y-3 mb-4">
-                    <p className="text-sm text-yellow-400 font-semibold">🎬 Найдено {foundHighlights.length} хайлайтов!</p>
-                    {foundHighlights.map((h, i) => (
-                      <div key={i} className={`bg-gradient-to-r ${h.color} rounded-xl p-4 flex items-center gap-3`}>
-                        <span className="text-3xl">{h.emoji}</span>
-                        <div>
-                          <p className="font-bold">{h.type}</p>
-                          <p className="text-sm opacity-80">{h.description}</p>
-                        </div>
-                      </div>
-                    ))}
-                    <Link href="/highlights" className="block text-center py-2 text-pink-400 hover:text-pink-300 text-sm">
-                      Смотреть в ленте →
-                    </Link>
-                  </div>
-                )}
-
-                <p className="text-gray-500 text-xs">Поддерживаются .dem файлы CS2</p>
+        <div className="p-4 border-t border-gray-800/50">
+          {nickname && (
+            <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-3 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                {nickname[0]?.toUpperCase()}
               </div>
-
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-400 mb-2">Найти демки с FACEIT</h3>
-                <button onClick={handleFetchDemos} disabled={demosLoading} className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-700 rounded-xl font-semibold text-sm">
-                  {demosLoading ? 'Загрузка...' : 'Найти мои демки'}
-                </button>
-                {demos.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    {demos.map((demo: any, i: number) => (
-                      <div key={i} className="bg-gray-900/50 rounded-xl p-3 flex items-center justify-between">
-                        <p className="text-sm">Матч #{demo.match_id?.slice(0, 8)}</p>
-                        {demo.demo_url ? <a href={demo.demo_url} target="_blank" className="text-blue-400 text-sm">Скачать</a> : <span className="text-gray-500 text-sm">Нет демки</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               <div>
-                <button onClick={handleFetchAnalyses} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl font-semibold text-sm mb-4">История анализов</button>
-                {analyses.length > 0 && (
-                  <div className="space-y-3">
-                    {analyses.map((a: any, i: number) => (
-                      <div key={i} className="bg-gray-900/50 rounded-xl p-4">
-                        <p className="text-sm text-gray-400">{a.map} · {new Date(a.created_at).toLocaleDateString('ru-RU')}</p>
-                        <div className="grid grid-cols-4 gap-2 mt-2 text-sm">
-                          <div>K/D: <span className="text-blue-400">{a.kd?.toFixed(2)}</span></div>
-                          <div>ADR: <span className="text-orange-400">{a.adr}</span></div>
-                          <div>HS%: <span className="text-green-400">{a.headshot_percent?.toFixed(1)}%</span></div>
-                          <div>KAST: <span className="text-cyan-400">{a.kast?.toFixed(1)}%</span></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <p className="text-sm font-semibold">{nickname}</p>
+                <p className="text-xs text-gray-500">Мой профиль</p>
               </div>
-            </div>
-          </>
-        )}
-      </div>
-    </main>
+            </Link>
+          )}
+        </div>
+      </aside>
+    </>
   )
 }
 
-export default function Cabinet() {
+// ─── Overview Tab ─────────────────────────────────────────────────────────────
+function OverviewTab({ nickname, faceit }: { nickname: string; faceit: any }) {
+  const stats = faceit?.stats?.lifetime
+
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">Загрузка...</div>}>
-      <CabinetContent />
-    </Suspense>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-black">Обзор</h2>
+        <p className="text-gray-400 mt-1">Твоя статистика и прогресс</p>
+      </div>
+
+      {/* ELO баннер */}
+      {faceit && (
+        <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/20 rounded-2xl p-6 flex items-center gap-5">
+          <img
+            src={faceit.avatar}
+            className="w-16 h-16 rounded-xl object-cover border-2 border-blue-500/30"
+            onError={e => { e.currentTarget.style.display = 'none' }}
+          />
+          <div className="flex-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h3 className="text-xl font-black">{faceit.nickname}</h3>
+              <span className="px-3 py-1 bg-orange-500/20 text-orange-400 text-sm font-bold rounded-full">
+                ELO {faceit.elo}
+              </span>
+            </div>
+            <p className="text-gray-400 text-sm mt-1">Faceit уровень {faceit.level || '—'}</p>
+          </div>
+          <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-xl text-sm font-medium transition-colors">
+            Профиль <ChevronRight size={14} />
+          </Link>
+        </div>
+      )}
+
+      {/* Статистика */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Винрейт', value: `${stats['Win Rate %'] || '—'}%`, icon: Trophy, color: 'from-emerald-500 to-green-600', bg: 'bg-emerald-500/10' },
+            { label: 'K/D Ratio', value: stats['Average K/D Ratio'] || '—', icon: Swords, color: 'from-red-500 to-orange-500', bg: 'bg-red-500/10' },
+            { label: 'HS%', value: `${stats['Average Headshots %'] || '—'}%`, icon: Target, color: 'from-yellow-500 to-amber-500', bg: 'bg-yellow-500/10' },
+            { label: 'Матчей', value: stats['Matches'] || '—', icon: BarChart2, color: 'from-blue-500 to-cyan-500', bg: 'bg-blue-500/10' },
+          ].map((s, i) => (
+            <div key={i} className={`${s.bg} border border-gray-700/50 rounded-2xl p-5`}>
+              <div className={`w-10 h-10 bg-gradient-to-br ${s.color} rounded-xl flex items-center justify-center mb-3`}>
+                <s.icon size={18} className="text-white" />
+              </div>
+              <p className="text-2xl font-black">{s.value}</p>
+              <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Быстрые действия */}
+      <div className="bg-gray-800/50 rounded-2xl p-6">
+        <h3 className="font-bold text-lg mb-4">Быстрые действия</h3>
+        <div className="space-y-3">
+          {[
+            { label: 'Загрузить демку', desc: 'Разбор ошибок с AI-анализом', icon: Upload, color: 'bg-red-500/20 text-red-400', tab: 'demos' },
+            { label: 'Мои хайлайты', desc: 'Управление видео-клипами', icon: Video, color: 'bg-pink-500/20 text-pink-400', tab: 'highlights' },
+            { label: 'ELO трекер', desc: 'График роста рейтинга', icon: TrendingUp, color: 'bg-green-500/20 text-green-400', tab: 'elo' },
+          ].map((item, i) => (
+            <button
+              key={i}
+              className="w-full flex items-center justify-between bg-gray-900/50 hover:bg-gray-700/50 rounded-xl p-4 transition-all group text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 ${item.color} rounded-lg flex items-center justify-center`}>
+                  <item.icon size={18} />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">{item.label}</p>
+                  <p className="text-xs text-gray-400">{item.desc}</p>
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-gray-600 group-hover:text-white transition-colors" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Demos Tab ─────────────────────────────────────────────────────────────────
+function DemosTab() {
+  const [tab, setTab] = useState<'upload' | 'history'>('upload')
+  const [loading, setLoading] = useState(false)
+  const [analysis, setAnalysis] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [history, setHistory] = useState<any[]>([])
+  const [nickname, setNickname] = useState('')
+
+  useEffect(() => {
+    const saved = localStorage.getItem('currentNickname')
+    if (saved) {
+      setNickname(saved)
+      fetch(`/api/demo/history?nickname=${saved}`)
+        .then(r => r.json())
+        .then(data => setHistory(data.history || []))
+        .catch(() => {})
+    }
+  }, [])
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLoading(true)
+    setError(null)
+    setAnalysis(null)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/demo/analysis', { method: 'POST', body: form })
+      const json = await res.json()
+      if (json.status === 'ok') setAnalysis(json.analysis)
+      else setError(json.detail || json.error || 'Ошибка анализа')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-black">Разбор демок</h2>
+        <p className="text-gray-400 mt-1">Загружай демки и получай AI-анализ ошибок</p>
+      </div>
+
+      <div className="flex gap-2">
+        {[
+          { id: 'upload', label: 'Загрузить' },
+          { id: 'history', label: 'История' },
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id as any)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              tab === t.id
+                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+                : 'bg-gray-800/50 text-gray-400 hover:text-white'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'upload' && (
+        <div className="space-y-4">
+          {loading ? (
+            <div className="bg-gray-800/50 rounded-2xl p-12 text-center">
+              <div className="w-16 h-16 border-4 border-red-500/30 border-t-red-500 rounded-full animate-spin mx-auto mb-6" />
+              <h3 className="text-xl font-bold mb-2">Анализируем демку...</h3>
+              <p className="text-gray-400 text-sm">Может занять 2-5 минут</p>
+              <div className="mt-6 space-y-2 text-sm text-gray-500">
+                <p>⚙️ Парсинг событий матча</p>
+                <p>🗺️ Обработка позиций на карте</p>
+                <p>🧠 Анализ ошибок</p>
+              </div>
+            </div>
+          ) : analysis ? (
+            <div className="space-y-4">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-3">
+                <CheckCircle size={24} className="text-emerald-400 flex-shrink-0" />
+                <div>
+                  <p className="font-bold">Анализ завершён!</p>
+                  <p className="text-sm text-gray-400">{analysis.stats?.nickname} · {analysis.stats?.map} · {analysis.stats?.total_rounds} раундов</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { label: 'K/D', value: analysis.stats?.kd },
+                  { label: 'ADR', value: analysis.stats?.adr },
+                  { label: 'HS%', value: `${analysis.stats?.hs}%` },
+                  { label: 'KAST', value: `${analysis.stats?.kast}%` },
+                ].map((s, i) => (
+                  <div key={i} className="bg-gray-800/50 rounded-xl p-4 text-center">
+                    <p className="text-xl font-black">{s.value}</p>
+                    <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+              {analysis.errors?.length > 0 && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5">
+                  <p className="font-bold text-red-400 mb-3">⚠️ Найдено ошибок: {analysis.errors.length}</p>
+                  <div className="space-y-2">
+                    {analysis.errors.slice(0, 3).map((e: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-gray-300">
+                        <span>{e.icon}</span> {e.title}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <label className="block cursor-pointer">
+                <input type="file" accept=".dem" className="hidden" onChange={handleFile} />
+                <div className="px-5 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium text-center transition-colors">
+                  Загрузить другую демку
+                </div>
+              </label>
+            </div>
+          ) : (
+            <>
+              <label className="block bg-gray-800/50 border-2 border-dashed border-gray-600 hover:border-red-500/50 rounded-2xl p-10 text-center cursor-pointer transition-all group">
+                <input type="file" accept=".dem" className="hidden" onChange={handleFile} />
+                <Swords size={48} className="text-red-400 mx-auto mb-4 group-hover:scale-110 transition-transform" />
+                <h3 className="text-xl font-bold mb-2">Загрузи .dem файл</h3>
+                <p className="text-gray-400 text-sm mb-5">Premier или Faceit · до 300 МБ</p>
+                <div className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl font-semibold inline-block text-sm">
+                  Выбрать файл
+                </div>
+              </label>
+
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-3 text-red-400 text-sm">
+                  <AlertCircle size={18} className="flex-shrink-0" />
+                  {error}
+                </div>
+              )}
+
+              <div className="bg-gray-800/50 rounded-2xl p-5 space-y-3">
+                <p className="text-sm font-semibold text-gray-400">Что получишь после анализа:</p>
+                {[
+                  'Сравнение с профи FaceIT 10 по K/D, ADR, KAST',
+                  'Список ошибок с советами как исправить',
+                  'Разбор каждого раунда с иконками',
+                  'Карта смертей и убийств',
+                ].map((t, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm text-gray-300">
+                    <span className="text-red-400 flex-shrink-0">→</span> {t}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {tab === 'history' && (
+        <div className="space-y-3">
+          {history.length === 0 ? (
+            <div className="bg-gray-800/50 rounded-2xl p-10 text-center">
+              <Clock size={40} className="text-gray-700 mx-auto mb-3" />
+              <p className="text-gray-400">История анализов пуста</p>
+              <p className="text-xs text-gray-600 mt-1">Загрузи первую демку</p>
+            </div>
+          ) : (
+            history.map((h: any, i: number) => (
+              <div key={i} className="bg-gray-800/50 rounded-2xl p-5 flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-sm">{h.map || 'Карта неизвестна'}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {h.created_at ? new Date(h.created_at).toLocaleDateString('ru-RU') : '—'} ·
+                    K/D {h.kd || '—'} · ADR {h.adr || '—'}
+                  </p>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  (h.kd || 0) >= 1.2 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                }`}>
+                  {(h.kd || 0) >= 1.2 ? 'Хорошо' : 'Есть над чем работать'}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Highlights Tab ────────────────────────────────────────────────────────────
+function HighlightsTab({ nickname }: { nickname: string }) {
+  const [highlights, setHighlights] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!nickname) return
+    fetch(`/api/highlights?nickname=${nickname}`)
+      .then(r => r.json())
+      .then(data => setHighlights(data.highlights || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [nickname])
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-black">Мои хайлайты</h2>
+        <p className="text-gray-400 mt-1">Видео-клипы из твоих матчей</p>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="w-10 h-10 border-4 border-pink-500/30 border-t-pink-500 rounded-full animate-spin" />
+        </div>
+      ) : highlights.length === 0 ? (
+        <div className="bg-gray-800/50 border-2 border-dashed border-gray-700 rounded-2xl p-12 text-center">
+          <Video size={48} className="text-gray-700 mx-auto mb-4" />
+          <h3 className="text-xl font-bold mb-2">Нет хайлайтов</h3>
+          <p className="text-gray-400 text-sm mb-6">Загрузи демку — мы автоматически нарежем лучшие моменты</p>
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              {['Загрузи .dem файл', '→', 'Генерация клипов', '→', 'Хайлайты готовы'].map((s, i) => (
+                <span key={i} className={i % 2 === 1 ? 'text-gray-700' : ''}>{s}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {highlights.map((h: any) => (
+            <div key={h.id} className="bg-gray-800/50 rounded-2xl overflow-hidden hover:bg-gray-800/80 transition-all group">
+              <div className="relative aspect-video">
+                <video src={h.video_url} controls className="w-full h-full object-cover" />
+              </div>
+              <div className="p-4">
+                <p className="font-semibold text-sm mb-2">{h.title || 'Без названия'}</p>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>{h.created_at ? new Date(h.created_at).toLocaleDateString('ru-RU') : '—'}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1"><Heart size={12} /> {h.likes || 0}</span>
+                    <a
+                      href={h.video_url}
+                      download
+                      className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      <Download size={12} /> Скачать
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── ELO Tab ───────────────────────────────────────────────────────────────────
+function EloTab({ faceit }: { faceit: any }) {
+  const elo = faceit?.elo || 0
+  const level = faceit?.level || 1
+
+  const levels = [
+    { level: 1, min: 0, max: 800, color: '#6b7280' },
+    { level: 2, min: 801, max: 950, color: '#10b981' },
+    { level: 3, min: 951, max: 1100, color: '#10b981' },
+    { level: 4, min: 1101, max: 1250, color: '#3b82f6' },
+    { level: 5, min: 1251, max: 1400, color: '#3b82f6' },
+    { level: 6, min: 1401, max: 1550, color: '#8b5cf6' },
+    { level: 7, min: 1551, max: 1700, color: '#8b5cf6' },
+    { level: 8, min: 1701, max: 1850, color: '#f59e0b' },
+    { level: 9, min: 1851, max: 2000, color: '#f59e0b' },
+    { level: 10, min: 2001, max: 9999, color: '#ef4444' },
+  ]
+
+  const currentLevel = levels.find(l => elo >= l.min && elo <= l.max) || levels[0]
+  const nextLevel = levels.find(l => l.level === currentLevel.level + 1)
+  const progress = nextLevel
+    ? Math.round(((elo - currentLevel.min) / (nextLevel.min - currentLevel.min)) * 100)
+    : 100
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-black">ELO Трекер</h2>
+        <p className="text-gray-400 mt-1">Отслеживай рейтинг и прогресс</p>
+      </div>
+
+      {!faceit ? (
+        <div className="bg-gray-800/50 rounded-2xl p-10 text-center">
+          <TrendingUp size={48} className="text-gray-700 mx-auto mb-4" />
+          <h3 className="text-xl font-bold mb-2">Привяжи Faceit аккаунт</h3>
+          <p className="text-gray-400 text-sm mb-6">Для отслеживания ELO нужен Faceit аккаунт</p>
+          <Link href="/profile/setup" className="px-6 py-3 bg-orange-500 hover:bg-orange-600 rounded-xl font-semibold text-sm transition-colors inline-block">
+            Привязать аккаунт
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* Текущий уровень */}
+          <div className="bg-gradient-to-r from-gray-800/50 to-gray-800/30 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="text-gray-400 text-sm">Текущий ELO</p>
+                <p className="text-4xl font-black mt-1" style={{ color: currentLevel.color }}>{elo}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-gray-400 text-sm">Уровень</p>
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black mt-1 border-2"
+                  style={{ borderColor: currentLevel.color, color: currentLevel.color }}
+                >
+                  {level}
+                </div>
+              </div>
+            </div>
+
+            {/* Прогресс до след. уровня */}
+            {nextLevel && (
+              <div>
+                <div className="flex justify-between text-xs text-gray-500 mb-2">
+                  <span>Уровень {currentLevel.level}</span>
+                  <span>{nextLevel.min - elo} ELO до уровня {nextLevel.level}</span>
+                  <span>Уровень {nextLevel.level}</span>
+                </div>
+                <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-1000"
+                    style={{ width: `${progress}%`, backgroundColor: currentLevel.color }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Уровни */}
+          <div className="bg-gray-800/50 rounded-2xl p-5">
+            <h3 className="font-bold mb-4 text-sm text-gray-400">Таблица уровней Faceit</h3>
+            <div className="space-y-2">
+              {levels.map(l => (
+                <div
+                  key={l.level}
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
+                    l.level === currentLevel.level ? 'bg-gray-700/50 ring-1 ring-gray-500' : 'hover:bg-gray-700/30'
+                  }`}
+                >
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    style={{ backgroundColor: `${l.color}20`, color: l.color }}
+                  >
+                    {l.level}
+                  </div>
+                  <div className="flex-1">
+                    <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: l.level === currentLevel.level ? `${progress}%` : l.level < currentLevel.level ? '100%' : '0%',
+                          backgroundColor: l.color
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-gray-500 w-24 text-right">
+                    {l.max === 9999 ? `${l.min}+` : `${l.min}–${l.max}`}
+                  </span>
+                  {l.level === currentLevel.level && (
+                    <span className="text-xs font-bold" style={{ color: l.color }}>Ты здесь</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Статистика */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-800/50 rounded-2xl p-5">
+              <p className="text-xs text-gray-500 mb-1">Матчей сыграно</p>
+              <p className="text-2xl font-black">{faceit.stats?.lifetime?.['Matches'] || '—'}</p>
+            </div>
+            <div className="bg-gray-800/50 rounded-2xl p-5">
+              <p className="text-xs text-gray-500 mb-1">Винрейт</p>
+              <p className="text-2xl font-black">{faceit.stats?.lifetime?.['Win Rate %'] || '—'}%</p>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── Main Cabinet Page ─────────────────────────────────────────────────────────
+export default function CabinetPage() {
+  const [nickname, setNickname] = useState('')
+  const [faceit, setFaceit] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState('overview')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('currentNickname')
+    if (saved) {
+      setNickname(saved)
+      fetch(`/api/faceit?nickname=${saved}`)
+        .then(r => r.json())
+        .then(data => setFaceit(data))
+        .catch(() => {})
+    }
+  }, [])
+
+  const renderTab = () => {
+    switch (activeTab) {
+      case 'overview': return <OverviewTab nickname={nickname} faceit={faceit} />
+      case 'demos': return <DemosTab />
+      case 'highlights': return <HighlightsTab nickname={nickname} />
+      case 'elo': return <EloTab faceit={faceit} />
+      default: return null
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 text-white flex">
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="fixed top-4 left-4 z-50 md:hidden bg-gray-800 p-2 rounded-xl"
+      >
+        {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      <Sidebar
+        nickname={nickname}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
+
+      <main className="flex-1 p-6 md:p-10 max-w-4xl">
+        {renderTab()}
+      </main>
+    </div>
   )
 }
