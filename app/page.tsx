@@ -21,6 +21,74 @@ const menuItems = [
   { id: 'analysis', label: 'Разбор ошибок', icon: Swords, color: 'from-red-500 to-orange-500' },
 ]
 
+function SearchUsers() {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+  const [showResults, setShowResults] = useState(false)
+
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); setShowResults(false); return }
+    const timer = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
+        const data = await res.json()
+        setResults(data.users || [])
+        setShowResults(true)
+      } catch {
+        setResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [query])
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onFocus={() => results.length > 0 && setShowResults(true)}
+          onBlur={() => setTimeout(() => setShowResults(false), 200)}
+          placeholder="Поиск игроков..."
+          className="w-full bg-gray-800 border border-gray-700 rounded-xl pl-8 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+        />
+        {searching && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+        )}
+      </div>
+
+      {showResults && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded-xl overflow-hidden z-50 shadow-xl">
+          {results.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-gray-500">Никого не найдено</p>
+          ) : (
+            results.map((u: any) => (
+              <Link
+                key={u.id}
+                href={`/profile/${u.faceit_nickname}`}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors"
+              >
+                <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  {u.faceit_nickname?.[0]?.toUpperCase() || '?'}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{u.faceit_nickname}</p>
+                  <p className="text-xs text-gray-500">Игрок</p>
+                </div>
+              </Link>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function InfoSection() {
   return (
     <div className="space-y-6">
@@ -166,7 +234,7 @@ function LineupsSection() {
       <p className="text-gray-400">Гранаты для каждой карты</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {maps.map((m, i) => (
-          <div key={i} className="bg-gray-800/50 rounded-2xl p-5 hover:bg-gray-800/80 transition-all cursor-pointer group">
+          <div key={i} className="bg-gray-800/50 rounded-2xl p-5 hover:bg-gray-800/80 transition-all cursor-pointer">
             <div className="flex items-center gap-3 mb-3">
               <span className="text-3xl">{m.img}</span>
               <h3 className="font-bold text-lg">{m.name}</h3>
@@ -268,72 +336,6 @@ const sections: Record<string, () => React.ReactNode> = {
   analysis: AnalysisSection,
 }
 
-function SearchUsers() {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<any[]>([])
-  const [searching, setSearching] = useState(false)
-  const [showResults, setShowResults] = useState(false)
-
-  useEffect(() => {
-    if (!query.trim()) { setResults([]); setShowResults(false); return }
-    const timer = setTimeout(async () => {
-      setSearching(true)
-      try {
-        const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
-        const data = await res.json()
-        setResults(data.users || [])
-        setShowResults(true)
-      } catch {
-        setResults([])
-      } finally {
-        setSearching(false)
-      }
-    }, 400)
-    return () => clearTimeout(timer)
-  }, [query])
-
-  return (
-    <div className="relative">
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onFocus={() => results.length > 0 && setShowResults(true)}
-          onBlur={() => setTimeout(() => setShowResults(false), 200)}
-          placeholder="Поиск игроков..."
-          className="w-full bg-gray-800 border border-gray-700 rounded-xl pl-8 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-        />
-        {searching && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />}
-      </div>
-
-      {showResults && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded-xl overflow-hidden z-50 shadow-xl">
-          {results.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-gray-500">Никого не найдено</p>
-          ) : (
-            results.map((u: any) => (
-              <Link
-                key={u.id}
-                href={`/profile/${u.faceit_nickname}`}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800 transition-colors"
-              >
-                <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
-                  {u.faceit_nickname?.[0]?.toUpperCase() || '?'}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">{u.faceit_nickname}</p>
-                  <p className="text-xs text-gray-500">Игрок</p>
-                </div>
-              </Link>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default function Home() {
   const [activeSection, setActiveSection] = useState('info')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -383,6 +385,7 @@ export default function Home() {
         transition-transform duration-300
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
+        {/* Логотип */}
         <div className="p-6 border-b border-gray-800/50">
           <h1 className="text-2xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             UFUTURE
@@ -391,9 +394,11 @@ export default function Home() {
         </div>
 
         {/* Поиск */}
-<div className="px-4 py-3 border-b border-gray-800/50">
-  <SearchUsers />
-</div>
+        <div className="px-4 py-3 border-b border-gray-800/50">
+          <SearchUsers />
+        </div>
+
+        {/* Меню */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon
@@ -417,6 +422,7 @@ export default function Home() {
           })}
         </nav>
 
+        {/* Нижняя часть */}
         <div className="p-4 border-t border-gray-800/50 space-y-2">
           <Link href="/highlights" className="flex items-center gap-2 px-4 py-2 text-sm text-pink-400 hover:bg-gray-800/50 rounded-xl transition-all">
             <Play size={16} /> Хайлайты
