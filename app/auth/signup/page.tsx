@@ -33,29 +33,31 @@ export default function SignupPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+  e.preventDefault()
+  setError('')
 
-    if (!validateForm()) {
-      return
+  if (!validateForm()) return
+
+  setLoading(true)
+
+  try {
+    await signup(email, password)
+    // Проверяем никнейм напрямую через API
+    const meRes = await fetch('/api/auth/me', { credentials: 'include' })
+    const meData = await meRes.json()
+    if (meData.user?.faceit_nickname) {
+      localStorage.setItem('currentNickname', meData.user.faceit_nickname)
+      router.push('/')
+    } else {
+      router.push('/profile/setup')
     }
-
-    setLoading(true)
-
-    try {
-      await signup(email, password)
-      setSuccess(true)
-      // Редирект на главную после регистрации
-      setTimeout(() => {
-        router.push('/')
-        router.refresh()
-      }, 2000)
-    } catch (err: any) {
-      setError(err.message || 'Ошибка при регистрации')
-    } finally {
-      setLoading(false)
-    }
+    router.refresh()
+  } catch (err: any) {
+    setError(err.message || 'Ошибка при регистрации')
+  } finally {
+    setLoading(false)
   }
+}
 
   if (authLoading) {
     return (

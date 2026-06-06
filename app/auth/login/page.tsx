@@ -15,27 +15,31 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-
-    if (!email || !password) {
-      setError('Заполните email и пароль')
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      await login(email, password)
-      // После успешного входа редирект на главную
-      router.push('/')
-      router.refresh()
-    } catch (err: any) {
-      setError(err.message || 'Ошибка при входе')
-    } finally {
-      setLoading(false)
-    }
+  e.preventDefault()
+  setError('')
+  if (!email || !password) {
+    setError('Заполните email и пароль')
+    return
   }
+  setLoading(true)
+  try {
+    await login(email, password)
+    // Проверяем никнейм напрямую через API
+    const meRes = await fetch('/api/auth/me', { credentials: 'include' })
+    const meData = await meRes.json()
+    if (meData.user?.faceit_nickname) {
+      localStorage.setItem('currentNickname', meData.user.faceit_nickname)
+      router.push('/')
+    } else {
+      router.push('/profile/setup')
+    }
+    router.refresh()
+  } catch (err: any) {
+    setError(err.message || 'Ошибка при входе')
+  } finally {
+    setLoading(false)
+  }
+}
 
   if (authLoading) {
     return (
