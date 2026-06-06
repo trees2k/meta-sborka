@@ -397,37 +397,19 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError }: {
   }
 
   const analyzeMatch = async (match: any) => {
-  if (!match.demo_url) {
-    onError('У этого матча нет демки')
-    return
-  }
+  if (!match.demo_url) { onError('У этого матча нет демки'); return }
   setDownloading(match.match_id)
   onLoading(true)
   onError(null)
   try {
-    // Браузер скачивает демку напрямую с Faceit CDN
-    const demoUrl = Array.isArray(match.demo_url) ? match.demo_url[0] : match.demo_url
-    onError('⏳ Скачиваем демку...')
-    const demoRes = await fetch(demoUrl)
-    if (!demoRes.ok) throw new Error('Не удалось скачать демку')
-    const blob = await demoRes.blob()
-
-    // Отправляем файл на анализ
-    onError('⏳ Отправляем на анализ...')
-    const form = new FormData()
-    const filename = demoUrl.split('/').pop() || 'demo.dem.zst'
-    form.append('file', blob, filename)
-    form.append('nickname', nickname)
-
-    const res = await fetch('/api/demo/analysis', { method: 'POST', body: form })
+    const res = await fetch('/api/demo/proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ demo_url: match.demo_url, nickname }),
+    })
     const data = await res.json()
-
-    if (data.status === 'ok') {
-      onError(null)
-      onAnalysis(data.analysis)
-    } else {
-      onError(data.detail || data.error || 'Ошибка анализа')
-    }
+    if (data.status === 'ok') onAnalysis(data.analysis)
+    else onError(data.detail || data.error || 'Ошибка анализа')
   } catch (e: any) {
     onError(e.message)
   } finally {
