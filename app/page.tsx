@@ -1,6 +1,5 @@
 'use client'
 
-import { TeamSection } from '@/components/team-section'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
@@ -9,6 +8,7 @@ import {
   Menu, X, Play, ArrowRight, Shield
 } from 'lucide-react'
 import { AnalysisSection } from '@/components/analysis-section'
+import { TeamSection } from '@/components/team-section'
 
 const menuItems = [
   { id: 'info', label: 'Информация', icon: Info, color: 'from-blue-500 to-cyan-500' },
