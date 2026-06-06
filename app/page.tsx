@@ -335,43 +335,52 @@ export default function Home() {
         </nav>
 
         <div className="p-4 border-t border-gray-800/50 space-y-2">
-          <Link href="/highlights" className="flex items-center gap-2 px-4 py-2 text-sm text-pink-400 hover:bg-gray-800/50 rounded-xl transition-all">
-            <Play size={16} /> Хайлайты
-          </Link>
-          <Link href="/cabinet" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
-            <BarChart3 size={16} /> Кабинет
-          </Link>
-          <Link href="/blog" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:bg-gray-800/50 rounded-xl transition-all">
-            <Star size={16} /> Блог
-          </Link>
-          <Link href="/messages" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
+  <Link href="/highlights" className="flex items-center gap-2 px-4 py-2 text-sm text-pink-400 hover:bg-gray-800/50 rounded-xl transition-all">
+    <Play size={16} /> Хайлайты
+  </Link>
+  <Link href="/cabinet" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
+    <BarChart3 size={16} /> Кабинет
+  </Link>
+  <Link href="/blog" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:bg-gray-800/50 rounded-xl transition-all">
+    <Star size={16} /> Блог
+  </Link>
+  <Link href="/messages" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
     <MessageCircle size={16} /> Сообщения
   </Link>
 
-          {nickname && (
-  <div className="mt-2 space-y-1">
-    <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-3 bg-gray-800/50 rounded-xl">
-      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
-        {nickname[0]?.toUpperCase()}
-      </div>
-      <div>
-        <p className="text-sm font-semibold">{nickname}</p>
-        <p className="text-xs text-gray-500">Профиль</p>
-      </div>
-    </Link>
-    <button
-      onClick={async () => {
-        await fetch('/api/auth/logout', { method: 'POST' })
-        localStorage.removeItem('currentNickname')
-        window.location.href = '/'
-      }}
-      className="w-full px-4 py-2 text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-left"
-    >
-      Выйти из аккаунта
-    </button>
-  </div>
-)}
+  {nickname ? (
+    <div className="mt-2 space-y-1">
+      <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-3 bg-gray-800/50 rounded-xl hover:bg-gray-800 transition-colors">
+        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+          {nickname[0]?.toUpperCase()}
         </div>
+        <div>
+          <p className="text-sm font-semibold">{nickname}</p>
+          <p className="text-xs text-gray-500">Профиль</p>
+        </div>
+      </Link>
+      <button
+        onClick={async () => {
+          await fetch('/api/auth/logout', { method: 'POST' })
+          localStorage.removeItem('currentNickname')
+          window.location.href = '/'
+        }}
+        className="w-full px-4 py-2 text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-left"
+      >
+        Выйти из аккаунта
+      </button>
+    </div>
+  ) : (
+    <div className="mt-2 space-y-2">
+      <Link href="/auth/login" className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl text-sm font-semibold transition-all">
+        Войти в аккаунт
+      </Link>
+      <Link href="/auth/signup" className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-800/50 hover:bg-gray-800 rounded-xl text-sm text-gray-400 transition-all">
+        Зарегистрироваться
+      </Link>
+    </div>
+  )}
+</div>
       </aside>
 
       <main className="flex-1 p-6 md:p-10 max-w-4xl">
