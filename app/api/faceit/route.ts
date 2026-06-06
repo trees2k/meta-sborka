@@ -77,10 +77,10 @@ export async function PATCH(request: Request) {
         })
         const matchDetail = await matchRes.json()
         return {
-          match_id: match.match_id,
-          demo_url: matchDetail.demo_url || null,
-          played_at: match.played_at
-        }
+  match_id: match.match_id,
+  demo_url: matchDetail.demo_url || null,
+  played_at: match.played_at || match.finished_at || match.started_at || null
+}
       })
     )
 
