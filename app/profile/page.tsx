@@ -5,8 +5,6 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { MessageCircle
-} from 'lucide-react'
 
 export default function ProfilePage() {
   const { nickname } = useParams<{ nickname: string }>()
@@ -89,9 +87,9 @@ export default function ProfilePage() {
               <button onClick={handleFollow} className="px-4 py-1 bg-blue-500 rounded-full text-sm">
                 {isFollowing ? 'Отписаться' : 'Подписаться'}
               </button>
-              <Link href="/messages" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
-  <MessageCircle size={16} /> Сообщения
-</Link>
+              <Link href={`/messages/${nickname}`} className="px-4 py-1 bg-gray-700 rounded-full text-sm">
+                Написать
+              </Link>
             </div>
           </div>
         </div>

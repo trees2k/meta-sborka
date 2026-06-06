@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Info, Bell, Users, Flame, Target, Dumbbell, BarChart3,
   ChevronRight, Trophy, Swords, TrendingUp, Star, Zap,
-  Menu, X, Play, ArrowRight, Shield
+  Menu, X, Play, ArrowRight, Shield, MessageCircle
 } from 'lucide-react'
 import { AnalysisSection } from '@/components/analysis-section'
 import { TeamSection } from '@/components/team-section'
@@ -336,6 +336,9 @@ export default function Home() {
           <Link href="/blog" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:bg-gray-800/50 rounded-xl transition-all">
             <Star size={16} /> Блог
           </Link>
+          <Link href="/messages" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
+    <MessageCircle size={16} /> Сообщения
+  </Link>
 
           {nickname && (
             <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-3 bg-gray-800/50 rounded-xl mt-2">
