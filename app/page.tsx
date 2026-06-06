@@ -349,16 +349,28 @@ export default function Home() {
   </Link>
 
           {nickname && (
-            <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-3 bg-gray-800/50 rounded-xl mt-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold">
-                {nickname[0]?.toUpperCase()}
-              </div>
-              <div>
-                <p className="text-sm font-semibold">{nickname}</p>
-                <p className="text-xs text-gray-500">Профиль</p>
-              </div>
-            </Link>
-          )}
+  <div className="mt-2 space-y-1">
+    <Link href={`/profile/${nickname}`} className="flex items-center gap-2 px-4 py-3 bg-gray-800/50 rounded-xl">
+      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+        {nickname[0]?.toUpperCase()}
+      </div>
+      <div>
+        <p className="text-sm font-semibold">{nickname}</p>
+        <p className="text-xs text-gray-500">Профиль</p>
+      </div>
+    </Link>
+    <button
+      onClick={async () => {
+        await fetch('/api/auth/logout', { method: 'POST' })
+        localStorage.removeItem('currentNickname')
+        window.location.href = '/'
+      }}
+      className="w-full px-4 py-2 text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all text-left"
+    >
+      Выйти из аккаунта
+    </button>
+  </div>
+)}
         </div>
       </aside>
 
