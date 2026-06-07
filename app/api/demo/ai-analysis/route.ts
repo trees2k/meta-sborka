@@ -44,7 +44,7 @@ ${errors.map((e: any) => `- ${e.title}: ${e.sub}`).join('\n')}
 
     const data = await res.json()
     const text = data.choices?.[0]?.message?.content || 'Не удалось получить анализ'
-    return NextResponse.json({ analysis: text })
+    return NextResponse.json({ analysis: text, debug: data })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
