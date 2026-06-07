@@ -7,7 +7,7 @@ const JWT_SECRET = new TextEncoder().encode(process.env.SUPABASE_SERVICE_ROLE_KE
  * Middleware для защиты маршрутов
  * Проверяет валидность JWT токена в cookies
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Защищённые маршруты (требуют авторизацию)
