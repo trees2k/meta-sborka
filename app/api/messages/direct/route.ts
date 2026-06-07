@@ -39,6 +39,14 @@ export async function GET(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+    // После получения сообщений — помечаем как прочитанные
+await supabase
+  .from('messages')
+  .update({ read: true })
+  .eq('to_nickname', myNickname)
+  .eq('from_nickname', withNickname)
+  .eq('read', false)
+
   const messages = (data || []).map(m => ({
     ...m,
     is_mine: m.from_nickname === myNickname,
