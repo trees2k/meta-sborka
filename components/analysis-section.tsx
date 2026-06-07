@@ -58,7 +58,6 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
 
   return (
     <div className="space-y-4">
-      {/* Шаг 1 */}
       <div className={`rounded-2xl overflow-hidden border transition-all ${step >= 1 ? 'border-orange-500/30 bg-orange-500/5' : 'border-gray-700/50 bg-gray-800/30'}`}>
         <div className="p-5">
           <div className="flex items-center gap-3 mb-4">
@@ -121,13 +120,10 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
         </div>
       </div>
 
-      {/* Шаг 2 */}
       {selectedMatch && (
         <div className="rounded-2xl overflow-hidden border border-blue-500/30 bg-blue-500/5 p-5">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-              2
-            </div>
+            <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
             <div>
               <p className="font-bold text-sm">Скачай демку с Faceit</p>
               <p className="text-xs text-gray-400">Откроется страница матча — нажми кнопку скачать</p>
@@ -160,13 +156,10 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
         </div>
       )}
 
-      {/* Шаг 3 */}
       {selectedMatch && (
         <div className="rounded-2xl overflow-hidden border border-emerald-500/30 bg-emerald-500/5 p-5">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-              3
-            </div>
+            <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
             <div>
               <p className="font-bold text-sm">Загрузи скачанный файл</p>
               <p className="text-xs text-gray-400">Перетащи файл с Рабочего стола или нажми "Выбрать файл"</p>
@@ -178,13 +171,7 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
             onDrop={handleDrop}
             onClick={() => document.getElementById('demo-file-faceit')?.click()}
           >
-            <input
-              id="demo-file-faceit"
-              type="file"
-              accept=".dem,.zst"
-              className="hidden"
-              onChange={handleFileInput}
-            />
+            <input id="demo-file-faceit" type="file" accept=".dem,.zst" className="hidden" onChange={handleFileInput} />
             <Upload size={32} className="text-emerald-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
             <p className="font-semibold text-sm">Перетащи файл с Рабочего стола сюда</p>
             <p className="text-xs text-gray-500 mt-1">или нажми чтобы выбрать · .dem или .dem.zst · до 500 МБ</p>
@@ -202,6 +189,8 @@ export function AnalysisSection() {
   const [analysis, setAnalysis] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [method, setMethod] = useState<'faceit' | 'manual' | null>(null)
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
 
   const tabs = [
     { id: 'overview', label: 'Обзор' },
@@ -214,6 +203,7 @@ export function AnalysisSection() {
     setLoading(true)
     setError(null)
     setAnalysis(null)
+    setAiAnalysis(null)
     try {
       const form = new FormData()
       form.append('file', file)
@@ -238,6 +228,23 @@ export function AnalysisSection() {
     e.stopPropagation()
     const file = e.dataTransfer.files?.[0]
     if (file) handleFile(file)
+  }
+
+  const getAiAnalysis = async () => {
+    setAiLoading(true)
+    try {
+      const res = await fetch('/api/demo/ai-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysis })
+      })
+      const data = await res.json()
+      setAiAnalysis(data.analysis || 'Не удалось получить анализ')
+    } catch {
+      setAiAnalysis('Ошибка получения AI анализа')
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   const stats = analysis ? [
@@ -292,10 +299,7 @@ export function AnalysisSection() {
 
         {!method && (
           <div className="grid md:grid-cols-2 gap-4">
-            <button
-              onClick={() => setMethod('faceit')}
-              className="bg-gray-800/50 hover:bg-gray-800/80 border border-gray-700/50 hover:border-orange-500/40 rounded-2xl p-6 text-left transition-all group"
-            >
+            <button onClick={() => setMethod('faceit')} className="bg-gray-800/50 hover:bg-gray-800/80 border border-gray-700/50 hover:border-orange-500/40 rounded-2xl p-6 text-left transition-all group">
               <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center mb-3">
                 <Zap size={20} className="text-orange-400" />
               </div>
@@ -305,11 +309,7 @@ export function AnalysisSection() {
                 Выбрать <ChevronDown size={14} className="rotate-[-90deg]" />
               </div>
             </button>
-
-            <button
-              onClick={() => setMethod('manual')}
-              className="bg-gray-800/50 hover:bg-gray-800/80 border border-gray-700/50 hover:border-emerald-500/40 rounded-2xl p-6 text-left transition-all group"
-            >
+            <button onClick={() => setMethod('manual')} className="bg-gray-800/50 hover:bg-gray-800/80 border border-gray-700/50 hover:border-emerald-500/40 rounded-2xl p-6 text-left transition-all group">
               <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-3">
                 <Upload size={20} className="text-emerald-400" />
               </div>
@@ -328,12 +328,7 @@ export function AnalysisSection() {
               <button onClick={() => setMethod(null)} className="text-gray-500 hover:text-white text-sm transition-colors">← Назад</button>
               <h3 className="font-bold">Загрузка с Faceit</h3>
             </div>
-            <FaceitDemoFinder
-              onAnalysis={setAnalysis}
-              onLoading={setLoading}
-              onError={setError}
-              onFileReady={handleFile}
-            />
+            <FaceitDemoFinder onAnalysis={setAnalysis} onLoading={setLoading} onError={setError} onFileReady={handleFile} />
           </div>
         )}
 
@@ -363,26 +358,17 @@ export function AnalysisSection() {
                 <p className="text-xs text-yellow-400">⚠️ Не перетаскивай файл прямо с сайта Faceit — он скачается заново. Сначала скачай в папку Загрузки, потом перетащи отсюда на сайт.</p>
               </div>
             </div>
-
             <div
               className="bg-gray-800/50 border-2 border-dashed border-gray-600 hover:border-red-500/50 rounded-2xl p-10 text-center cursor-pointer transition-all group"
               onDragOver={e => { e.preventDefault(); e.stopPropagation() }}
               onDrop={handleDrop}
               onClick={() => document.getElementById('demo-file-manual')?.click()}
             >
-              <input
-                id="demo-file-manual"
-                type="file"
-                accept=".dem,.zst"
-                className="hidden"
-                onChange={handleFileInput}
-              />
+              <input id="demo-file-manual" type="file" accept=".dem,.zst" className="hidden" onChange={handleFileInput} />
               <Swords size={48} className="text-red-400 mx-auto mb-4 group-hover:scale-110 transition-transform" />
               <h3 className="text-xl font-bold mb-2">Перетащи файл с Рабочего стола сюда</h3>
               <p className="text-gray-400 text-sm mb-5">или нажми чтобы выбрать · .dem или .dem.zst · до 500 МБ</p>
-              <div className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl font-semibold inline-block text-sm">
-                Выбрать файл
-              </div>
+              <div className="px-6 py-2.5 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl font-semibold inline-block text-sm">Выбрать файл</div>
             </div>
           </div>
         )}
@@ -418,31 +404,44 @@ export function AnalysisSection() {
         </div>
         <div className="flex items-center gap-3">
           {errors.length > 0 && (
-            <span className="bg-red-500/20 text-red-400 text-sm px-3 py-1 rounded-full font-semibold">
-              {errors.length} ошибок
-            </span>
+            <span className="bg-red-500/20 text-red-400 text-sm px-3 py-1 rounded-full font-semibold">{errors.length} ошибок</span>
           )}
-          <div
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm cursor-pointer transition-all"
-            onClick={() => document.getElementById('demo-file-new')?.click()}
-          >
+          <div className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm cursor-pointer transition-all" onClick={() => document.getElementById('demo-file-new')?.click()}>
             <input id="demo-file-new" type="file" accept=".dem,.zst" className="hidden" onChange={handleFileInput} />
             Новая демка
           </div>
         </div>
       </div>
 
+      {/* AI Анализ */}
+      <div className="bg-gradient-to-r from-purple-600/10 to-blue-600/10 border border-purple-500/20 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🤖</span>
+            <p className="font-bold text-sm">AI Тренер</p>
+            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">Gemini</span>
+          </div>
+          {!aiAnalysis && (
+            <button
+              onClick={getAiAnalysis}
+              disabled={aiLoading}
+              className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:opacity-90 disabled:opacity-50 rounded-xl text-xs font-semibold transition-all"
+            >
+              {aiLoading ? '⏳ Анализирую...' : '✨ Получить анализ'}
+            </button>
+          )}
+        </div>
+        {aiAnalysis ? (
+          <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{aiAnalysis}</div>
+        ) : (
+          <p className="text-xs text-gray-500">Нажми кнопку чтобы получить персональный анализ от AI тренера</p>
+        )}
+      </div>
+
       <div className="flex gap-2 flex-wrap">
         {tabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              tab === t.id
-                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                : 'bg-gray-800/50 text-gray-400 hover:text-white'
-            }`}
-          >
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${tab === t.id ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white' : 'bg-gray-800/50 text-gray-400 hover:text-white'}`}>
             {t.label}
           </button>
         ))}
@@ -478,17 +477,13 @@ export function AnalysisSection() {
               {stats.filter(s => s.good).length === 0
                 ? <p className="text-sm text-gray-500">Есть над чем поработать</p>
                 : stats.filter(s => s.good).map((s, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm text-emerald-400 mb-1">
-                    <span>✓</span> {s.label}: {s.you}
-                  </div>
+                  <div key={i} className="flex items-center gap-2 text-sm text-emerald-400 mb-1"><span>✓</span> {s.label}: {s.you}</div>
                 ))}
             </div>
             <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5">
               <p className="text-sm text-gray-400 mb-3">Зоны роста</p>
               {stats.filter(s => !s.good).map((s, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-red-400 mb-1">
-                  <span>✗</span> {s.label}: {s.you} (норма: {s.pro})
-                </div>
+                <div key={i} className="flex items-center gap-2 text-sm text-red-400 mb-1"><span>✗</span> {s.label}: {s.you} (норма: {s.pro})</div>
               ))}
             </div>
           </div>
@@ -497,9 +492,7 @@ export function AnalysisSection() {
 
       {tab === 'rounds' && (
         <div className="bg-gray-800/50 rounded-2xl divide-y divide-gray-700/50">
-          {rounds.length === 0 && (
-            <div className="p-6 text-center text-gray-400 text-sm">Нет данных по раундам</div>
-          )}
+          {rounds.length === 0 && <div className="p-6 text-center text-gray-400 text-sm">Нет данных по раундам</div>}
           {rounds.map((r: any, i: number) => (
             <div key={i} className="flex items-center gap-3 px-5 py-4">
               <span className="text-gray-500 text-sm w-6">{r.n}</span>
@@ -521,10 +514,8 @@ export function AnalysisSection() {
           )}
           {errors.map((e: any, i: number) => (
             <div key={i} className="bg-gray-800/50 rounded-2xl overflow-hidden">
-              <button
-                onClick={() => setOpenErr(openErr === i ? null : i)}
-                className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-700/30 transition-all text-left"
-              >
+              <button onClick={() => setOpenErr(openErr === i ? null : i)}
+                className="w-full flex items-center gap-3 px-5 py-4 hover:bg-gray-700/30 transition-all text-left">
                 <span className="text-2xl">{e.icon}</span>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -558,11 +549,7 @@ export function AnalysisSection() {
           <div className="bg-gray-900 rounded-2xl p-4">
             <p className="text-xs text-gray-500 mb-3">{s.map} — {deaths.length} смертей · {kills.length} убийств</p>
             <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: '1' }}>
-              <img
-                src={`https://totalcsgo.com/images/maps/map-${s.map}.jpg`}
-                className="w-full h-full object-cover opacity-40"
-                onError={e => (e.currentTarget.style.display = 'none')}
-              />
+              <img src={`https://totalcsgo.com/images/maps/map-${s.map}.jpg`} className="w-full h-full object-cover opacity-40" onError={e => (e.currentTarget.style.display = 'none')} />
               <svg viewBox="0 0 500 500" className="absolute inset-0 w-full h-full">
                 {(() => {
                   const all = [...deaths, ...kills]
