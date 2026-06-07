@@ -37,7 +37,7 @@ ${errors.map((e: any) => `- ${e.title}: ${e.sub}`).join('\n')}
         'X-Title': 'UFUTURE CS2 Coach'
       },
       body: JSON.stringify({
-        model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1:free',
+        model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
         messages: [{ role: 'user', content: prompt }]
       })
     })
