@@ -200,23 +200,29 @@ export function AnalysisSection() {
   ] as const
 
   const handleFile = async (file: File) => {
-    setLoading(true)
-    setError(null)
-    setAnalysis(null)
-    setAiAnalysis(null)
-    try {
-      const form = new FormData()
-      form.append('file', file)
-      const res = await fetch('/api/demo/analysis', { method: 'POST', body: form })
-      const json = await res.json()
-      if (json.status === 'ok') setAnalysis(json.analysis)
-      else setError(json.detail || json.error || 'Ошибка анализа')
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+  setLoading(true)
+  setError(null)
+  setAnalysis(null)
+  setAiAnalysis(null)
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    // Добавляем никнейм
+    const meRes = await fetch('/api/auth/me')
+    const meData = await meRes.json()
+    if (meData.user?.faceit_nickname) {
+      form.append('nickname', meData.user.faceit_nickname)
     }
+    const res = await fetch('/api/demo/analysis', { method: 'POST', body: form })
+    const json = await res.json()
+    if (json.status === 'ok') setAnalysis(json.analysis)
+    else setError(json.detail || json.error || 'Ошибка анализа')
+  } catch (err: any) {
+    setError(err.message)
+  } finally {
+    setLoading(false)
   }
+}
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
