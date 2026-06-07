@@ -341,6 +341,19 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [nickname, setNickname] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+useEffect(() => {
+  const checkUnread = () => {
+    fetch('/api/messages/unread')
+      .then(r => r.json())
+      .then(data => setUnreadCount(data.count || 0))
+      .catch(() => {})
+  }
+  checkUnread()
+  const interval = setInterval(checkUnread, 30000) // каждые 30 сек
+  return () => clearInterval(interval)
+}, [])
 
   useEffect(() => {
     const saved = localStorage.getItem('currentNickname')
@@ -434,8 +447,16 @@ export default function Home() {
             <Star size={16} /> Блог
           </Link>
           <Link href="/messages" className="flex items-center gap-2 px-4 py-2 text-sm text-blue-400 hover:bg-gray-800/50 rounded-xl transition-all">
-            <MessageCircle size={16} /> Сообщения
-          </Link>
+  <div className="relative">
+    <MessageCircle size={16} />
+    {unreadCount > 0 && (
+      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-bold">
+        {unreadCount > 9 ? '9+' : unreadCount}
+      </span>
+    )}
+  </div>
+  Сообщения
+</Link>
 
           {isLoggedIn ? (
             <div className="mt-2 space-y-1">
