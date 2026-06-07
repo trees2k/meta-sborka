@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 
 export async function POST(request: Request) {
   try {
     const { analysis } = await request.json()
-
     if (!analysis) return NextResponse.json({ error: 'analysis обязателен' }, { status: 400 })
 
     const s = analysis.stats
@@ -29,20 +28,22 @@ ${errors.map((e: any) => `- ${e.title}: ${e.sub}`).join('\n')}
 
 Дай краткий анализ (3-4 предложения) и 3 конкретных совета как улучшить игру. Отвечай на русском языке. Будь конкретным и практичным.`
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      }
-    )
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://ufuture.ru',
+        'X-Title': 'UFUTURE CS2 Coach'
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    })
 
     const data = await res.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Не удалось получить анализ'
-
+    const text = data.choices?.[0]?.message?.content || 'Не удалось получить анализ'
     return NextResponse.json({ analysis: text })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
