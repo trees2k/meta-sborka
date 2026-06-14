@@ -189,12 +189,12 @@ function UpdatesSection() {
 
 function WarmupSection() {
   const routines = [
-    { name: 'Аим тренировка', time: '15 мин', desc: 'DM + Workshop карты для разогрева', icon: '🎯', workshop: '243702660' },
-    { name: 'Спрей контроль', time: '10 мин', desc: 'Тренировка контроля отдачи АК-47 и M4', icon: '💥', workshop: '419404847' },
-    { name: 'Флики и реакция', time: '10 мин', desc: 'Aim Botz + Fast Aim / Reflex Training', icon: '⚡', workshop: '368026786' },
-    { name: 'Пистолетный раунд', time: '5 мин', desc: 'USP/Glock/Deagle на Pistol DM', icon: '🔫', workshop: '243702660' },
-    { name: 'Движение', time: '10 мин', desc: 'KZ/Surf для улучшения мувмента', icon: '🏃', workshop: '313953000' },
-  ]
+  { name: 'Аим тренировка', time: '15 мин', desc: 'DM + Workshop карты для разогрева', icon: '🎯', workshop: '243702660' },
+  { name: 'Спрей контроль', time: '10 мин', desc: 'Тренировка контроля отдачи АК-47 и M4', icon: '💥', workshop: '419404847' },
+  { name: 'Флики и реакция', time: '10 мин', desc: 'Aim Botz + Fast Aim / Reflex Training', icon: '⚡', workshop: '368026786' },
+  { name: 'Пистолетный раунд', time: '5 мин', desc: 'USP/Glock/Deagle на Pistol DM', icon: '🔫', workshop: '243702660' },
+  { name: 'Движение', time: '10 мин', desc: 'KZ/Surf для улучшения мувмента', icon: '🏃', workshop: '313953000' },
+]
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-black">Разминка</h2>
@@ -209,11 +209,13 @@ function WarmupSection() {
             </div>
             <span className="text-sm text-gray-500 bg-gray-700/50 px-3 py-1 rounded-full">{r.time}</span>
             <a
-              href={`steam://run/730//+host_workshop_map ${r.workshop}`}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl text-sm font-semibold transition-all flex-shrink-0"
-            >
-              Играть
-            </a>
+            href={`https://steamcommunity.com/sharedfiles/filedetails/?id=${r.workshop}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:opacity-90 rounded-xl text-sm font-semibold transition-all flex-shrink-0"
+>
+  Открыть
+</a>
           </div>
         ))}
       </div>
