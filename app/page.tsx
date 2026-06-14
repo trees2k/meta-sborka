@@ -251,7 +251,7 @@ function LineupsSection() {
   const lineups: Record<string, Record<string, any[]>> = {
     'Mirage': {
       insta: [
-        { name: 'Смок CT', pos: 'Т спавн, угол дома', throw: 'Прыжок + бросок', desc: 'Встань в угол между домом и забором на Т спавне. Прицелься в верхний край крыши дома. Прыжок + бросок.' },
+        { name: 'Смок CT', pos: 'Т спавн, угол дома', throw: 'Прыжок + бросок', desc: 'Встань в угол между домом и забором на Т спавне. Прицелься в верхний край крыши дома. Прыжок + бросок.', img: '' },
         { name: 'Смок Jungle', pos: 'Середина T спавна', throw: 'Обычный бросок', desc: 'Встань по центру Т спавна у ящиков. Прицелься в левый край антенны. Обычный бросок без прыжка.' },
         { name: 'Смок Stairs', pos: 'Т спавн, левая сторона', throw: 'Бросок с места', desc: 'Встань у левого края выхода с Т спавна. Прицелься в правый угол крыши лестниц. Бросок с места.' },
       ],
@@ -346,9 +346,12 @@ function LineupsSection() {
                     <p className="text-sm font-medium">{g.throw}</p>
                   </div>
                 </div>
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                  <p className="text-sm text-gray-300">{g.desc}</p>
-                </div>
+                {g.img && (
+  <img src={g.img} alt={g.name} className="w-full rounded-xl object-cover" style={{ maxHeight: '220px' }} />
+)}
+<div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+  <p className="text-sm text-gray-300">{g.desc}</p>
+</div>
               </div>
             ))}
           </div>
