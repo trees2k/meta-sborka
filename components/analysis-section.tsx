@@ -183,7 +183,7 @@ function FaceitDemoFinder({ onAnalysis, onLoading, onError, onFileReady }: {
 }
 
 export function AnalysisSection() {
-  const [tab, setTab] = useState<'overview' | 'rounds' | 'errors' | 'map'>('overview')
+  const [tab, setTab] = useState<'overview' | 'rounds' | 'errors'>('overview')
   const [openErr, setOpenErr] = useState<number | null>(0)
   const [loading, setLoading] = useState(false)
   const [analysis, setAnalysis] = useState<any>(null)
@@ -193,11 +193,10 @@ export function AnalysisSection() {
   const [aiLoading, setAiLoading] = useState(false)
 
   const tabs = [
-    { id: 'overview', label: 'Обзор' },
-    { id: 'rounds', label: 'По раундам' },
-    { id: 'errors', label: 'Ошибки' },
-    { id: 'map', label: 'Карта' },
-  ] as const
+  { id: 'overview', label: 'Обзор' },
+  { id: 'rounds', label: 'По раундам' },
+  { id: 'errors', label: 'Ошибки' },
+] as const
 
   const handleFile = async (file: File) => {
   setLoading(true)
@@ -392,14 +391,7 @@ export function AnalysisSection() {
   const s = analysis.stats
   const errors = analysis.errors || []
   const rounds = analysis.rounds || []
-  const deaths = analysis.deaths || []
-  const kills = analysis.kills || []
 
-  const calcPos = (pts: any[]) => {
-    if (!pts.length) return { minX: 0, maxX: 1, minY: 0, maxY: 1 }
-    const allX = pts.map(p => p.x), allY = pts.map(p => p.y)
-    return { minX: Math.min(...allX), maxX: Math.max(...allX), minY: Math.min(...allY), maxY: Math.max(...allY) }
-  }
 
   return (
     <div className="space-y-6">
@@ -549,40 +541,6 @@ export function AnalysisSection() {
           ))}
         </div>
       )}
-
-      {tab === 'map' && (
-        <div className="space-y-4">
-          <div className="bg-gray-900 rounded-2xl p-4">
-            <p className="text-xs text-gray-500 mb-3">{s.map} — {deaths.length} смертей · {kills.length} убийств</p>
-            <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: '1' }}>
-              <img src={`https://totalcsgo.com/images/maps/map-${s.map}.jpg`} className="w-full h-full object-cover opacity-40" onError={e => (e.currentTarget.style.display = 'none')} />
-              <svg viewBox="0 0 500 500" className="absolute inset-0 w-full h-full">
-                {(() => {
-                  const all = [...deaths, ...kills]
-                  if (!all.length) return null
-                  const { minX, maxX, minY, maxY } = calcPos(all)
-                  const rX = maxX - minX || 1
-                  const rY = maxY - minY || 1
-                  const sx = (x: number) => ((x - minX) / rX) * 420 + 40
-                  const sy = (y: number) => ((maxY - y) / rY) * 420 + 40
-                  return <>
-                    {kills.slice(0, 50).map((k: any, i: number) => (
-                      <circle key={`k${i}`} cx={sx(k.x)} cy={sy(k.y)} r="7" fill="#0f6e56" stroke="#1d9e75" strokeWidth="1.5" opacity="0.85" />
-                    ))}
-                    {deaths.map((d: any, i: number) => (
-                      <circle key={`d${i}`} cx={sx(d.x)} cy={sy(d.y)} r="10" fill="#7f1515" stroke="#e24b4a" strokeWidth="2" opacity="0.9" />
-                    ))}
-                  </>
-                })()}
-              </svg>
-            </div>
-          </div>
-          <div className="flex gap-4 flex-wrap text-xs text-gray-400">
-            <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500 inline-block" />Смерть ({deaths.length})</span>
-            <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />Убийство ({kills.length})</span>
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
   )
 }
