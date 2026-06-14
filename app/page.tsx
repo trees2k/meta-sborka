@@ -228,43 +228,154 @@ function WarmupSection() {
 }
 
 function LineupsSection() {
+  const [selectedMap, setSelectedMap] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('insta')
+
   const maps = [
-    { name: 'Mirage', smokes: 24, flashes: 18, molotovs: 12, img: '🏜️' },
-    { name: 'Dust 2', smokes: 20, flashes: 15, molotovs: 10, img: '🌵' },
-    { name: 'Inferno', smokes: 22, flashes: 16, molotovs: 14, img: '🔥' },
-    { name: 'Ancient', smokes: 18, flashes: 12, molotovs: 8, img: '🏛️' },
-    { name: 'Nuke', smokes: 16, flashes: 14, molotovs: 10, img: '☢️' },
-    { name: 'Anubis', smokes: 14, flashes: 10, molotovs: 8, img: '🐍' },
+    { name: 'Mirage', img: '🏜️' },
+    { name: 'Dust 2', img: '🌵' },
+    { name: 'Inferno', img: '🔥' },
+    { name: 'Ancient', img: '🏛️' },
+    { name: 'Nuke', img: '☢️' },
+    { name: 'Anubis', img: '🐍' },
   ]
+
+  const tabs = [
+    { id: 'insta', label: 'Инста смоки' },
+    { id: 'second', label: 'Выход на плент' },
+    { id: 'fake', label: 'Фейк смоки' },
+    { id: 'flash', label: 'Флешки' },
+    { id: 'molotov', label: 'Молотовы' },
+  ]
+
+  const lineups: Record<string, Record<string, any[]>> = {
+    'Mirage': {
+      insta: [
+        { name: 'Смок CT', pos: 'Т спавн, угол дома', throw: 'Прыжок + бросок', desc: 'Встань в угол между домом и забором на Т спавне. Прицелься в верхний край крыши дома. Прыжок + бросок.' },
+        { name: 'Смок Jungle', pos: 'Середина T спавна', throw: 'Обычный бросок', desc: 'Встань по центру Т спавна у ящиков. Прицелься в левый край антенны. Обычный бросок без прыжка.' },
+        { name: 'Смок Stairs', pos: 'Т спавн, левая сторона', throw: 'Бросок с места', desc: 'Встань у левого края выхода с Т спавна. Прицелься в правый угол крыши лестниц. Бросок с места.' },
+      ],
+      second: [
+        { name: 'Смок Short', pos: 'Мид, за ящиком', throw: 'Прыжок + бросок', desc: 'Зайди на мид, встань за большим ящиком. Прицелься в антенну слева. Прыжок + бросок закрывает шорт.' },
+        { name: 'Смок A main', pos: 'Ramp вход', throw: 'Обычный бросок', desc: 'Встань у входа на рампу слева. Прицелься в правый угол крыши рампы. Обычный бросок.' },
+      ],
+      fake: [
+        { name: 'Фейк B смок', pos: 'Т спавн', throw: 'Обычный бросок', desc: 'Бросок смока в сторону B апарта создаёт иллюзию захода на B пока команда идёт на A.' },
+      ],
+      flash: [
+        { name: 'Флешка через рампу', pos: 'Вход на рампу', throw: 'Бросок через угол', desc: 'Встань у стены входа на рампу. Бросок через угол здания ослепляет игроков на A сайте.' },
+        { name: 'Флешка B апарт', pos: 'Т спавн', throw: 'Высокий бросок', desc: 'Высокий бросок через здание ослепляет игроков в B апарте при заходе.' },
+      ],
+      molotov: [
+        { name: 'Молотов CT', pos: 'Рампа', throw: 'Обычный бросок', desc: 'С рампы бросок молотова на позицию CT выбивает игроков с угла при захвате A.' },
+        { name: 'Молотов Jungle', pos: 'Мид', throw: 'Прыжок + бросок', desc: 'С мида прыжок + бросок поджигает Jungle и выбивает игроков при захвате мида.' },
+      ],
+    },
+    'Dust 2': {
+      insta: [
+        { name: 'Смок Xbox', pos: 'Т спавн мид', throw: 'Обычный бросок', desc: 'Встань у выхода с Т спавна на мид. Прицелься в левый угол Xbox. Обычный бросок закрывает Xbox.' },
+        { name: 'Смок CT', pos: 'Long, угол', throw: 'Прыжок + бросок', desc: 'Встань у угла выхода на Long. Прицелься в верх CT спавна. Прыжок + бросок.' },
+      ],
+      second: [
+        { name: 'Смок Short', pos: 'Мид', throw: 'Бросок с места', desc: 'С мида бросок закрывает выход CT со Short на A сайт при захвате.' },
+      ],
+      fake: [
+        { name: 'Фейк Long смок', pos: 'Т спавн', throw: 'Обычный бросок', desc: 'Смок в сторону Long при заходе на B создаёт давление на двух направлениях.' },
+      ],
+      flash: [
+        { name: 'Флешка Long', pos: 'Выход на Long', throw: 'Высокий бросок', desc: 'Высокий бросок ослепляет игроков за ящиками на Long при выходе.' },
+      ],
+      molotov: [
+        { name: 'Молотов Short', pos: 'Мид', throw: 'Прыжок + бросок', desc: 'С мида поджигает Short угол при захвате A через мид.' },
+      ],
+    },
+  }
+
+  const currentLineups = selectedMap ? lineups[selectedMap] : null
+  const currentGrenades = currentLineups ? (currentLineups[activeTab] || []) : []
+
+  if (selectedMap) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setSelectedMap(null)} className="text-gray-400 hover:text-white text-sm transition-colors">← Назад</button>
+          <h2 className="text-3xl font-black">Раскидка — {selectedMap}</h2>
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                activeTab === t.id
+                  ? 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white'
+                  : 'bg-gray-800/50 text-gray-400 hover:text-white'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {!lineups[selectedMap] ? (
+          <div className="bg-gray-800/50 rounded-2xl p-10 text-center">
+            <p className="text-4xl mb-3">🚧</p>
+            <p className="text-gray-400">Раскидки для {selectedMap} скоро будут добавлены</p>
+          </div>
+        ) : currentGrenades.length === 0 ? (
+          <div className="bg-gray-800/50 rounded-2xl p-10 text-center">
+            <p className="text-4xl mb-3">🚧</p>
+            <p className="text-gray-400">Раздел в разработке</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {currentGrenades.map((g: any, i: number) => (
+              <div key={i} className="bg-gray-800/50 rounded-2xl p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-lg">{g.name}</h3>
+                  <span className="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full">{g.throw}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-900/50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500 mb-1">📍 Позиция</p>
+                    <p className="text-sm font-medium">{g.pos}</p>
+                  </div>
+                  <div className="bg-gray-900/50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500 mb-1">🎯 Бросок</p>
+                    <p className="text-sm font-medium">{g.throw}</p>
+                  </div>
+                </div>
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                  <p className="text-sm text-gray-300">{g.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-black">Раскидка</h2>
-      <p className="text-gray-400">Гранаты для каждой карты</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <p className="text-gray-400">Выбери карту чтобы изучить гранаты</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {maps.map((m, i) => (
-          <div key={i} className="bg-gray-800/50 rounded-2xl p-5 hover:bg-gray-800/80 transition-all cursor-pointer">
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-3xl">{m.img}</span>
-              <h3 className="font-bold text-lg">{m.name}</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center text-sm">
-              <div className="bg-gray-700/50 rounded-lg p-2">
-                <p className="font-bold text-white">{m.smokes}</p>
-                <p className="text-gray-400 text-xs">Смоки</p>
-              </div>
-              <div className="bg-gray-700/50 rounded-lg p-2">
-                <p className="font-bold text-yellow-400">{m.flashes}</p>
-                <p className="text-gray-400 text-xs">Флешки</p>
-              </div>
-              <div className="bg-gray-700/50 rounded-lg p-2">
-                <p className="font-bold text-orange-400">{m.molotovs}</p>
-                <p className="text-gray-400 text-xs">Молотовы</p>
-              </div>
-            </div>
-          </div>
+          <button
+            key={i}
+            onClick={() => { setSelectedMap(m.name); setActiveTab('insta') }}
+            className="bg-gray-800/50 hover:bg-gray-800/80 rounded-2xl p-6 text-left transition-all border border-gray-700/50 hover:border-yellow-500/30"
+          >
+            <span className="text-4xl mb-3 block">{m.img}</span>
+            <h3 className="font-bold text-lg">{m.name}</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              {lineups[m.name] ? 'Доступно' : '🚧 Скоро'}
+            </p>
+          </button>
         ))}
       </div>
-      <p className="text-gray-500 text-sm text-center">🚧 Раздел в разработке. Скоро добавим видео-гайды по раскидкам.</p>
     </div>
   )
 }
